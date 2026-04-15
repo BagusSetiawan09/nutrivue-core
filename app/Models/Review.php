@@ -13,7 +13,13 @@ class Review extends Model
         'menu_id', 
         'user_id', 
         'rating', 
-        'komentar'
+        'komentar',
+        'foto_bukti',
+        'is_visible'
+    ];
+
+    protected $casts = [
+        'is_visible' => 'boolean',
     ];
 
     public function menu()

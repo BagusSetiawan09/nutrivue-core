@@ -15,8 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('menu_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->integer('rating');
+            $table->integer('rating'); // Bintang 1-5
             $table->text('komentar');
+            $table->boolean('is_visible')->default(true);
             $table->timestamps();
         });
     }

@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
         // Memanggil seeder untuk Menu
         $this->call([
             MenuSeeder::class,
+            ReviewSeeder::class,
         ]);
     }
 }

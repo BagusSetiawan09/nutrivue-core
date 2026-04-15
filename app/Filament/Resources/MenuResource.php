@@ -33,11 +33,36 @@ class MenuResource extends Resource
     // Nama menu di sidebar
     protected static ?string $navigationLabel = 'Jadwal Menu MBG';
 
+    // Hanya Super Admin dan Petugas yang boleh melihat menu ini di sidebar
+    public static function canViewAny(): bool
+    {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        return in_array($user->role, ['super_admin', 'petugas']);
+    }
+
+    // Hanya Super Admin yang boleh membuat jadwal menu baru
+    public static function canCreate(): bool
+    {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        return $user->role === 'super_admin';
+    }
+
+    // Hanya Super Admin yang boleh menghapus
+    public static function canDeleteAny(): bool
+    {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        return $user->role === 'super_admin';
+    }
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Card::make()->schema([
+                // PERBAIKAN: Card diganti menjadi Section
+                Forms\Components\Section::make()->schema([
                     Forms\Components\TextInput::make('nama_menu')
                         ->required()
                         ->maxLength(255),
@@ -125,7 +150,8 @@ class MenuResource extends Resource
                         'Balita' => 'warning',
                         'Ibu Hamil' => 'info',
                         default => 'gray',
-                    }),
+                    })
+                    ->sortable(), // Saya tambahkan sortable agar rapi
                 Tables\Columns\TextColumn::make('tanggal_distribusi')
                     ->date('d M Y')
                     ->sortable(),
