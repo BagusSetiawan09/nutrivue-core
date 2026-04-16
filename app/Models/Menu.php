@@ -14,7 +14,7 @@ class Menu extends Model
         'nama_menu',
         'tanggal_distribusi',
         'target_penerima',
-        'lokasi_distribusi',
+        'titik_penyaluran_id',
         'foto_makanan',
         'deskripsi',
         'kalori',
@@ -23,6 +23,11 @@ class Menu extends Model
         'lemak',
         'status',
     ];
+
+    public function titik_penyaluran()
+    {
+        return $this->belongsTo(TitikPenyaluran::class);
+    }
 
     // Relationship with Review
     public function reviews()

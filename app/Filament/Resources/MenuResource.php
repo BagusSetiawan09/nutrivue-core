@@ -61,7 +61,6 @@ class MenuResource extends Resource
     {
         return $form
             ->schema([
-                // PERBAIKAN: Card diganti menjadi Section
                 Forms\Components\Section::make()->schema([
                     Forms\Components\TextInput::make('nama_menu')
                         ->required()
@@ -75,9 +74,12 @@ class MenuResource extends Resource
                             'Ibu Hamil' => 'Ibu Hamil',
                         ])
                         ->required(),
-                    Forms\Components\TextInput::make('lokasi_distribusi')
-                        ->label('Titik Penyaluran (Sekolah/Posyandu)')
-                        ->maxLength(255),
+                    Forms\Components\Select::make('titik_penyaluran_id')
+                        ->relationship('titik_penyaluran', 'nama_lokasi')
+                        ->label('Lokasi Penyaluran')
+                        ->searchable()
+                        ->preload()
+                        ->required(),
                     Forms\Components\FileUpload::make('foto_makanan')
                         ->image()
                         ->directory('menu-images')
@@ -87,7 +89,6 @@ class MenuResource extends Resource
                         ->label('Deskripsi/Kandungan Menu')
                         ->columnSpanFull(),
                         
-                    // Bagian untuk input nilai gizi dengan styling khusus
                     Forms\Components\Grid::make(4)->schema([
                         Forms\Components\TextInput::make('kalori')
                             ->numeric()
@@ -127,7 +128,6 @@ class MenuResource extends Resource
                     ->searchable()
                     ->weight('bold'),
                 
-                // Menambahkan kolom status dengan badge dan ikon untuk visualisasi
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -151,11 +151,14 @@ class MenuResource extends Resource
                         'Ibu Hamil' => 'info',
                         default => 'gray',
                     })
-                    ->sortable(), // Saya tambahkan sortable agar rapi
+                    ->sortable(),
+                    
                 Tables\Columns\TextColumn::make('tanggal_distribusi')
                     ->date('d M Y')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('lokasi_distribusi')
+                    
+                Tables\Columns\TextColumn::make('titik_penyaluran.nama_lokasi')
+                    ->label('Lokasi Penyaluran')
                     ->searchable(),
             ])
             ->filters([
@@ -166,7 +169,6 @@ class MenuResource extends Resource
                     ViewAction::make(),
                     EditAction::make(),
                     
-                    // Tambahan: Action untuk mengubah status langsung dari tabel tanpa masuk ke halaman edit
                     Action::make('ubah_status')
                         ->label('Ubah Status')
                         ->icon('heroicon-m-arrow-path')
@@ -204,7 +206,6 @@ class MenuResource extends Resource
     {
         return $infolist
             ->schema([
-                // Bagian 1: Foto Makanan dan Nama Menu dengan styling khusus
                 Section::make()
                     ->schema([
                         ImageEntry::make('foto_makanan')
@@ -223,7 +224,6 @@ class MenuResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                // Bagian 2: Informasi Distribusi dengan ikon dan badge untuk target penerima
                 Section::make('Informasi Distribusi')
                     ->schema([
                         TextEntry::make('tanggal_distribusi')
@@ -241,7 +241,7 @@ class MenuResource extends Resource
                                 default => 'gray',
                             }),
                             
-                        TextEntry::make('lokasi_distribusi')
+                        TextEntry::make('titik_penyaluran.nama_lokasi')
                             ->label('Titik Lokasi')
                             ->icon('heroicon-m-map-pin'),
                             
@@ -250,12 +250,10 @@ class MenuResource extends Resource
                             ->color('gray'),
                     ])->columns(3),
                 
-                // Bagian 3: Kandungan Gizi & Makronutrien dengan styling khusus
                 Section::make('Kandungan Gizi & Makronutrien')
                     ->schema([
                         InfolistGrid::make(3)->schema([
                             
-                            // Menampilkan nilai gizi dengan styling
                             InfolistGrid::make(1)->schema([
                                 TextEntry::make('kalori')->suffix(' Kcal')
                                     ->size(TextEntry\TextEntrySize::Large)
@@ -275,7 +273,6 @@ class MenuResource extends Resource
                                     ->extraAttributes(['class' => 'bg-gray-50 dark:bg-white/5 p-4 rounded-xl ring-1 ring-gray-950/5 dark:ring-white/10']),
                             ])->columnSpan(1),
                             
-                            // Chart Gizi dibuat dalam ViewEntry yang memanggil Blade Component
                             ViewEntry::make('gizi_chart')
                                 ->view('filament.infolists.components.gizi-chart')
                                 ->columnSpan(2),
