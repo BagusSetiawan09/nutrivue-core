@@ -7,14 +7,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * Pengaturan Kontroler Autentikasi API
+ * Mengelola gerbang pendaftaran masuk dan keluar akun untuk integrasi aplikasi mobile
+ */
 class AuthController
 {
     /**
-     * Endpoint untuk Pendaftaran Pengguna Baru (Register)
+     * Menangani pendaftaran pengguna baru melalui aplikasi klien
+     * Melakukan validasi data menyeluruh sebelum proses penyimpanan ke basis data
      */
     public function register(Request $request)
     {
-        // 1. Validasi input dari React Native
+        // Proses validasi integritas data masukan dari perangkat pengguna
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -26,20 +31,21 @@ class AuthController
             'phone' => 'required|string',
         ]);
 
+        // Penanganan respon jika data masukan tidak memenuhi syarat validasi
         if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Validasi gagal',
+                'message' => 'Proses validasi data gagal dilakukan',
                 'errors' => $validator->errors()
             ], 422);
         }
 
         try {
-            // 2. Simpan data ke Database
+            // Pencatatan informasi profil pengguna baru ke dalam sistem
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
-                'password' => Hash::make($request->password), // Enkripsi password
+                'password' => Hash::make($request->password), 
                 'kategori' => $request->kategori,
                 'tempat_lahir' => $request->tempat_lahir,
                 'tanggal_lahir' => $request->tanggal_lahir,
@@ -47,32 +53,34 @@ class AuthController
                 'phone' => $request->phone,
             ]);
 
-            // 3. Buatkan Token Akses menggunakan Sanctum
+            // Penerbitan token akses otomatis melalui mekanisme laravel sanctum
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            // 4. Kembalikan Response Sukses ke React Native
+            // Mengirimkan respon sukses pendaftaran beserta token otentikasi
             return response()->json([
                 'status' => 'success',
-                'message' => 'Pendaftaran berhasil',
+                'message' => 'Pendaftaran akun berhasil diselesaikan',
                 'data' => $user,
                 'token' => $token
             ], 201);
 
         } catch (\Exception $e) {
+            // Menangani kegagalan teknis pada operasional server internal
             return response()->json([
                 'status' => 'error',
-                'message' => 'Terjadi kesalahan pada server',
+                'message' => 'Terjadi kendala teknis pada server operasional',
                 'error_detail' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Endpoint untuk Masuk (Login)
+     * Menangani permintaan akses masuk pengguna ke dalam sistem
+     * Memvalidasi kredensial keamanan dan menghasilkan token sesi aktif
      */
     public function login(Request $request)
     {
-        // 1. Validasi input
+        // Validasi kelengkapan atribut email dan kata sandi pengguna
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required'
@@ -81,42 +89,44 @@ class AuthController
         if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Email dan Password wajib diisi'
+                'message' => 'Alamat email dan kata sandi wajib diisi secara lengkap'
             ], 422);
         }
 
-        // 2. Cek kecocokan Email dan Password di Database
+        // Verifikasi keberadaan identitas pengguna dalam database pusat
         $user = User::where('email', $request->email)->first();
 
+        // Validasi kecocokan identitas akun dan enkripsi kata sandi
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Email atau Kata Sandi salah'
+                'message' => 'Alamat email atau kata sandi tidak ditemukan'
             ], 401);
         }
 
-        // 3. Buatkan Token Akses
+        // Penerbitan token akses sesi baru bagi perangkat pengguna
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Login berhasil',
+            'message' => 'Proses masuk ke dalam sistem berhasil',
             'data' => $user,
             'token' => $token
         ], 200);
     }
 
     /**
-     * Endpoint untuk Keluar (Logout)
+     * Menangani proses pengakhiran sesi akses pengguna
+     * Melakukan terminasi pada token akses yang sedang digunakan pada perangkat
      */
     public function logout(Request $request)
     {
-        // Hapus token yang sedang digunakan di perangkat tersebut
+        // Penghapusan data token akses aktif dari sistem keamanan sanctum
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Logout berhasil'
+            'message' => 'Sesi akses berhasil diakhiri secara aman'
         ], 200);
     }
 }
