@@ -22,17 +22,24 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\Grid as InfolistGrid;
 
+/**
+ * Pengaturan Resource Ulasan Publik
+ * Mengelola moderasi komentar dan penilaian dari warga atau pengguna aplikasi
+ */
 class ReviewResource extends Resource
 {
+    // Model referensi data ulasan
     protected static ?string $model = Review::class;
 
+    // Konfigurasi ikon navigasi bilah sisi
     protected static ?string $navigationIcon = 'heroicon-o-star';
     
+    // Label navigasi yang tampil pada menu sidebar
     protected static ?string $navigationLabel = 'Ulasan Publik';
 
-    // --- MANAJEMEN AKSES (RBAC) ---
-
-    // 1. Yang boleh MELIHAT menu Ulasan Publik: Super Admin & Petugas
+    /**
+     * Membatasi visibilitas menu hanya untuk super admin dan petugas
+     */
     public static function canViewAny(): bool
     {
         /** @var \App\Models\User $user */
@@ -40,7 +47,9 @@ class ReviewResource extends Resource
         return in_array($user->role, ['super_admin', 'petugas']);
     }
 
-    // 2. Yang boleh MEMBUAT ulasan manual dari dashboard: Hanya Super Admin (Petugas tidak perlu)
+    /**
+     * Membatasi pembuatan ulasan manual hanya untuk peran super admin
+     */
     public static function canCreate(): bool
     {
         /** @var \App\Models\User $user */
@@ -48,7 +57,9 @@ class ReviewResource extends Resource
         return $user->role === 'super_admin';
     }
 
-    // 3. Yang boleh MENGEDIT/MEMBALAS/PUBLISH (Moderasi): Super Admin & Petugas
+    /**
+     * Memberikan hak moderasi ulasan kepada super admin dan petugas
+     */
     public static function canEdit($record): bool
     {
         /** @var \App\Models\User $user */
@@ -56,7 +67,9 @@ class ReviewResource extends Resource
         return in_array($user->role, ['super_admin', 'petugas']);
     }
 
-    // 4. Yang boleh MENGHAPUS ulasan: HANYA Super Admin
+    /**
+     * Membatasi hak penghapusan ulasan secara massal hanya untuk super admin
+     */
     public static function canDeleteAny(): bool
     {
         /** @var \App\Models\User $user */
@@ -64,6 +77,9 @@ class ReviewResource extends Resource
         return $user->role === 'super_admin';
     }
 
+    /**
+     * Membatasi hak penghapusan ulasan satuan hanya untuk super admin
+     */
     public static function canDelete($record): bool
     {
         /** @var \App\Models\User $user */
@@ -71,13 +87,13 @@ class ReviewResource extends Resource
         return $user->role === 'super_admin';
     }
 
-    // ------------------------------
-
+    /**
+     * Definisi skema formulir moderasi ulasan
+     */
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                // PERBAIKAN: Mengganti Card menjadi Section untuk menghindari garis biru
                 Forms\Components\Section::make()->schema([
                     Forms\Components\Select::make('menu_id')
                         ->relationship('menu', 'nama_menu')
@@ -87,12 +103,12 @@ class ReviewResource extends Resource
                         
                     Forms\Components\Select::make('user_id')
                         ->relationship('user', 'name')
-                        ->label('Nama Warga/Pengguna')
+                        ->label('Nama Warga Pengguna')
                         ->searchable()
                         ->required(),
                         
                     Forms\Components\Select::make('rating')
-                        ->label('Penilaian (Bintang)')
+                        ->label('Penilaian Bintang')
                         ->options([
                             1 => '⭐ 1 Bintang',
                             2 => '⭐⭐ 2 Bintang',
@@ -108,16 +124,16 @@ class ReviewResource extends Resource
                         ->columnSpanFull(),
 
                     Forms\Components\FileUpload::make('foto_bukti')
-                        ->label('Foto Bukti (Opsional)')
+                        ->label('Foto Bukti Opsional')
                         ->image()
                         ->directory('review-evidence')
                         ->maxSize(5120)
-                        ->helperText('Lampirkan foto jika ada ketidaksesuaian atau masalah pada makanan.')
+                        ->helperText('Lampirkan foto jika ditemukan ketidaksesuaian pada menu')
                         ->columnSpanFull(),
                         
                     Forms\Components\Toggle::make('is_visible')
                         ->label('Tampilkan ke Publik')
-                        ->helperText('Matikan jika komentar mengandung kata kasar (moderasi).')
+                        ->helperText('Nonaktifkan jika komentar mengandung unsur pelanggaran')
                         ->default(true)
                         ->onColor('success')
                         ->offColor('danger'),
@@ -125,6 +141,9 @@ class ReviewResource extends Resource
             ]);
     }
 
+    /**
+     * Definisi struktur tabel daftar ulasan warga
+     */
     public static function table(Table $table): Table
     {
         return $table
@@ -141,7 +160,7 @@ class ReviewResource extends Resource
                     ->weight('bold'),
                     
                 TextColumn::make('menu.nama_menu')
-                    ->label('Menu yang Diulas')
+                    ->label('Menu Terulas')
                     ->searchable()
                     ->limit(20),
                     
@@ -158,7 +177,6 @@ class ReviewResource extends Resource
                     ->limit(30)
                     ->searchable(),
                     
-                // Fitur Toggle ini otomatis mengikuti hak akses canEdit()
                 ToggleColumn::make('is_visible')
                     ->label('Publikasi')
                     ->onColor('success')
@@ -171,13 +189,13 @@ class ReviewResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                // Filter tambahan dapat ditambahkan di sini
             ])
             ->actions([
                 ActionGroup::make([
-                    ViewAction::make(),
-                    EditAction::make(),
-                    DeleteAction::make(), // Tombol hapus akan disembunyikan otomatis untuk Petugas
+                    ViewAction::make()->label('Lihat'),
+                    EditAction::make()->label('Moderasi'),
+                    DeleteAction::make()->label('Hapus'),
                 ])
                 ->button()
                 ->color('gray')
@@ -190,6 +208,9 @@ class ReviewResource extends Resource
             ]);
     }
 
+    /**
+     * Tampilan detail ulasan dan informasi moderasi
+     */
     public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist
@@ -220,7 +241,7 @@ class ReviewResource extends Resource
                                 
                             TextEntry::make('created_at')
                                 ->label('Waktu Ulasan')
-                                ->date('d F Y, H:i')
+                                ->date('d F Y H:i')
                                 ->icon('heroicon-m-clock'),
                         ]),
                         
@@ -241,20 +262,26 @@ class ReviewResource extends Resource
                             ->label('Status Moderasi')
                             ->badge()
                             ->color(fn (bool $state): string => $state ? 'success' : 'danger')
-                            ->formatStateUsing(fn (bool $state): string => $state ? 'Ditampilkan ke Publik' : 'Disembunyikan (Moderasi)')
+                            ->formatStateUsing(fn (bool $state): string => $state ? 'Ditampilkan ke Publik' : 'Disembunyikan Moderasi')
                             ->icon(fn (bool $state): string => $state ? 'heroicon-m-eye' : 'heroicon-m-eye-slash')
                             ->columnSpanFull(),
                     ])
             ]);
     }
 
+    /**
+     * Definisi relasi antar model
+     */
     public static function getRelations(): array
     {
         return [
-            //
+            // Relasi tambahan dapat didefinisikan di sini
         ];
     }
 
+    /**
+     * Pendaftaran rute halaman resource
+     */
     public static function getPages(): array
     {
         return [

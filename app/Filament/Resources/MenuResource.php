@@ -23,17 +23,24 @@ use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\Grid as InfolistGrid;
 use Filament\Infolists\Components\ViewEntry;
 
+/**
+ * Pengaturan Resource Menu Makanan
+ * Mengelola jadwal distribusi makanan bergizi serta kandungan nutrisinya
+ */
 class MenuResource extends Resource
 {
+    // Model referensi data menu makanan
     protected static ?string $model = Menu::class;
 
-    // Ikon untuk di sidebar kiri
+    // Konfigurasi ikon navigasi bilah sisi
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     
-    // Nama menu di sidebar
+    // Label navigasi yang tampil pada menu sidebar
     protected static ?string $navigationLabel = 'Jadwal Menu MBG';
 
-    // Hanya Super Admin dan Petugas yang boleh melihat menu ini di sidebar
+    /**
+     * Membatasi visibilitas menu hanya untuk super admin dan petugas
+     */
     public static function canViewAny(): bool
     {
         /** @var \App\Models\User $user */
@@ -41,7 +48,9 @@ class MenuResource extends Resource
         return in_array($user->role, ['super_admin', 'petugas']);
     }
 
-    // Hanya Super Admin yang boleh membuat jadwal menu baru
+    /**
+     * Membatasi hak pembuatan jadwal hanya untuk peran super admin
+     */
     public static function canCreate(): bool
     {
         /** @var \App\Models\User $user */
@@ -49,7 +58,9 @@ class MenuResource extends Resource
         return $user->role === 'super_admin';
     }
 
-    // Hanya Super Admin yang boleh menghapus
+    /**
+     * Membatasi hak penghapusan data hanya untuk peran super admin
+     */
     public static function canDeleteAny(): bool
     {
         /** @var \App\Models\User $user */
@@ -57,78 +68,102 @@ class MenuResource extends Resource
         return $user->role === 'super_admin';
     }
 
+    /**
+     * Definisi skema formulir input data menu
+     */
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Section::make()->schema([
                     Forms\Components\TextInput::make('nama_menu')
+                        ->label('Nama Menu')
                         ->required()
                         ->maxLength(255),
+
                     Forms\Components\DatePicker::make('tanggal_distribusi')
+                        ->label('Tanggal Distribusi')
                         ->required(),
+
                     Forms\Components\Select::make('target_penerima')
+                        ->label('Target Penerima')
                         ->options([
                             'Siswa' => 'Anak Sekolah',
                             'Balita' => 'Balita',
                             'Ibu Hamil' => 'Ibu Hamil',
                         ])
                         ->required(),
+
                     Forms\Components\Select::make('titik_penyaluran_id')
                         ->relationship('titik_penyaluran', 'nama_lokasi')
                         ->label('Lokasi Penyaluran')
                         ->searchable()
                         ->preload()
                         ->required(),
+
                     Forms\Components\FileUpload::make('foto_makanan')
+                        ->label('Foto Makanan')
                         ->image()
                         ->directory('menu-images')
                         ->maxSize(5120)
                         ->columnSpanFull(),
+
                     Forms\Components\Textarea::make('deskripsi')
-                        ->label('Deskripsi/Kandungan Menu')
+                        ->label('Deskripsi Kandungan Menu')
                         ->columnSpanFull(),
                         
+                    // Skema input informasi nilai gizi
                     Forms\Components\Grid::make(4)->schema([
                         Forms\Components\TextInput::make('kalori')
+                            ->label('Kalori')
                             ->numeric()
                             ->suffix('Kcal'),
                         Forms\Components\TextInput::make('protein')
+                            ->label('Protein')
                             ->numeric()
                             ->suffix('g'),
                         Forms\Components\TextInput::make('karbohidrat')
+                            ->label('Karbohidrat')
                             ->numeric()
                             ->suffix('g'),
                         Forms\Components\TextInput::make('lemak')
+                            ->label('Lemak')
                             ->numeric()
                             ->suffix('g'),
                     ]),
 
                     Forms\Components\Select::make('status')
-                            ->options([
-                                'Menunggu' => 'Menunggu Jadwal',
-                                'Sedang Dikirim' => 'Sedang Dikirim',
-                                'Selesai' => 'Selesai Distribusi',
-                            ])
-                            ->default('Menunggu')
-                            ->required(),
+                        ->label('Status Distribusi')
+                        ->options([
+                            'Menunggu' => 'Menunggu Jadwal',
+                            'Sedang Dikirim' => 'Sedang Dikirim',
+                            'Selesai' => 'Selesai Distribusi',
+                        ])
+                        ->default('Menunggu')
+                        ->required(),
                 ])
             ]);
     }
 
+    /**
+     * Definisi struktur tabel daftar menu distribusi
+     */
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('foto_makanan')
+                    ->label('Foto')
                     ->circular()
                     ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name=' . urlencode($record->nama_menu) . '&color=FFFFFF&background=9CA3AF'),
                 
                 Tables\Columns\TextColumn::make('nama_menu')
+                    ->label('Nama Menu')
                     ->searchable()
                     ->weight('bold'),
                 
                 Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'Menunggu' => 'gray',
@@ -144,6 +179,7 @@ class MenuResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('target_penerima')
+                    ->label('Target')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'Siswa' => 'success',
@@ -154,6 +190,7 @@ class MenuResource extends Resource
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('tanggal_distribusi')
+                    ->label('Tanggal')
                     ->date('d M Y')
                     ->sortable(),
                     
@@ -162,13 +199,14 @@ class MenuResource extends Resource
                     ->searchable(),
             ])
             ->filters([
-                //
+                // Filter kustom dapat ditambahkan di sini
             ])
             ->actions([
                 ActionGroup::make([
-                    ViewAction::make(),
-                    EditAction::make(),
+                    ViewAction::make()->label('Lihat Detail'),
+                    EditAction::make()->label('Ubah Data'),
                     
+                    // Aksi cepat untuk memperbarui status distribusi
                     Action::make('ubah_status')
                         ->label('Ubah Status')
                         ->icon('heroicon-m-arrow-path')
@@ -187,13 +225,13 @@ class MenuResource extends Resource
                         ->action(function ($record, array $data): void {
                             $record->update(['status' => $data['status']]);
                         })
-                        ->successNotificationTitle('Status berhasil diperbarui!'),
+                        ->successNotificationTitle('Status distribusi berhasil diperbarui'),
                         
-                    DeleteAction::make(),
+                    DeleteAction::make()->label('Hapus'),
                 ])
                 ->button()
                 ->color('gray')
-                ->label('Aksi'),
+                ->label('Kelola'),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -202,6 +240,9 @@ class MenuResource extends Resource
             ]);
     }
 
+    /**
+     * Tampilan detail informasi menu makanan
+     */
     public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist
@@ -227,12 +268,12 @@ class MenuResource extends Resource
                 Section::make('Informasi Distribusi')
                     ->schema([
                         TextEntry::make('tanggal_distribusi')
-                            ->label('Tanggal')
+                            ->label('Tanggal Distribusi')
                             ->date('d F Y')
                             ->icon('heroicon-m-calendar'),
                             
                         TextEntry::make('target_penerima')
-                            ->label('Target')
+                            ->label('Target Penerima')
                             ->badge()
                             ->color(fn (string $state): string => match ($state) {
                                 'Siswa' => 'success',
@@ -246,34 +287,42 @@ class MenuResource extends Resource
                             ->icon('heroicon-m-map-pin'),
                             
                         TextEntry::make('deskripsi')
+                            ->label('Deskripsi Menu')
                             ->columnSpanFull()
                             ->color('gray'),
                     ])->columns(3),
                 
-                Section::make('Kandungan Gizi & Makronutrien')
+                Section::make('Kandungan Gizi Makronutrien')
                     ->schema([
                         InfolistGrid::make(3)->schema([
                             
+                            // Visualisasi nilai numerik gizi
                             InfolistGrid::make(1)->schema([
                                 TextEntry::make('kalori')->suffix(' Kcal')
+                                    ->label('Energi')
                                     ->size(TextEntry\TextEntrySize::Large)
                                     ->weight('bold')->color('danger')
                                     ->extraAttributes(['class' => 'bg-gray-50 dark:bg-white/5 p-4 rounded-xl ring-1 ring-gray-950/5 dark:ring-white/10']),
                                     
                                 TextEntry::make('protein')->suffix(' g')
+                                    ->label('Protein')
                                     ->size(TextEntry\TextEntrySize::Large)->weight('bold')
                                     ->extraAttributes(['class' => 'bg-gray-50 dark:bg-white/5 p-4 rounded-xl ring-1 ring-gray-950/5 dark:ring-white/10']),
                                     
                                 TextEntry::make('karbohidrat')->suffix(' g')
+                                    ->label('Karbohidrat')
                                     ->size(TextEntry\TextEntrySize::Large)->weight('bold')
                                     ->extraAttributes(['class' => 'bg-gray-50 dark:bg-white/5 p-4 rounded-xl ring-1 ring-gray-950/5 dark:ring-white/10']),
                                     
                                 TextEntry::make('lemak')->suffix(' g')
+                                    ->label('Lemak')
                                     ->size(TextEntry\TextEntrySize::Large)->weight('bold')
                                     ->extraAttributes(['class' => 'bg-gray-50 dark:bg-white/5 p-4 rounded-xl ring-1 ring-gray-950/5 dark:ring-white/10']),
                             ])->columnSpan(1),
                             
+                            // Komponen visualisasi grafik gizi
                             ViewEntry::make('gizi_chart')
+                                ->label('Grafik Komposisi Gizi')
                                 ->view('filament.infolists.components.gizi-chart')
                                 ->columnSpan(2),
                         ]),
@@ -281,13 +330,19 @@ class MenuResource extends Resource
             ]);
     }
 
+    /**
+     * Definisi relasi antar model
+     */
     public static function getRelations(): array
     {
         return [
-            //
+            // Relasi tambahan dapat didefinisikan di sini
         ];
     }
 
+    /**
+     * Pendaftaran rute halaman resource
+     */
     public static function getPages(): array
     {
         return [

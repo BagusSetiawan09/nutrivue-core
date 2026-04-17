@@ -15,14 +15,27 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Illuminate\Support\Str;
 
+/**
+ * Pengaturan Resource Aplikasi Klien
+ * Mengelola akses API Token untuk integrasi platform eksternal
+ */
 class ClientAppResource extends Resource
 {
+    // Model referensi data aplikasi klien
     protected static ?string $model = ClientApp::class;
 
+    // Konfigurasi ikon navigasi bilah sisi
     protected static ?string $navigationIcon = 'heroicon-o-key';
+
+    // Label navigasi yang tampil pada menu
     protected static ?string $navigationLabel = 'Manajemen API Keys';
+
+    // Pengelompokan menu dalam navigasi sistem
     protected static ?string $navigationGroup = 'Pengaturan Sistem';
 
+    /**
+     * Membatasi akses resource hanya untuk peran super admin
+     */
     public static function canViewAny(): bool
     {
         /** @var \App\Models\User $user */
@@ -30,34 +43,40 @@ class ClientAppResource extends Resource
         return $user->role === 'super_admin';
     }
 
+    /**
+     * Definisi skema formulir pembuatan dan pembaruan data
+     */
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Section::make('Informasi Aplikasi Klien')
-                    ->description('Daftarkan aplikasi (misal: Android, iOS, Web) yang akan menggunakan API sistem ini.')
+                    ->description('Daftarkan aplikasi klien seperti Android iOS atau Web untuk integrasi API')
                     ->schema([
                         TextInput::make('name')
-                            ->label('Nama Aplikasi / Identitas')
-                            ->placeholder('Contoh: Aplikasi Android Warga v1.0')
+                            ->label('Nama Aplikasi Identitas')
+                            ->placeholder('Contoh Aplikasi Android Warga v1.0')
                             ->required()
                             ->maxLength(255),
                             
                         Textarea::make('description')
                             ->label('Deskripsi Penggunaan')
-                            ->placeholder('Jelaskan untuk apa token ini digunakan.')
+                            ->placeholder('Jelaskan tujuan penggunaan token ini')
                             ->maxLength(500),
                             
                         Toggle::make('is_active')
                             ->label('Status Aktif')
                             ->default(true)
-                            ->helperText('Matikan jika kamu ingin mencabut akses API untuk klien ini.')
+                            ->helperText('Nonaktifkan untuk mencabut seluruh akses API klien ini')
                             ->onColor('success')
                             ->offColor('danger'),
                     ])->columns(1)
             ]);
     }
 
+    /**
+     * Definisi struktur tabel daftar aplikasi klien
+     */
     public static function table(Table $table): Table
     {
         return $table
@@ -80,58 +99,60 @@ class ClientAppResource extends Resource
                     
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Didaftarkan Pada')
-                    ->dateTime('d M Y, H:i')
+                    ->dateTime('d M Y H:i')
                     ->sortable(),
             ])
             ->filters([
-                //
+                // Filter data dapat ditambahkan di sini
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\EditAction::make(),
                     
+                    // Aksi untuk pembuatan token API baru
                     Tables\Actions\Action::make('generate_token')
                         ->label('Generate Token Baru')
                         ->icon('heroicon-m-sparkles')
                         ->color('success')
                         ->requiresConfirmation()
                         ->modalHeading('Generate API Token Baru')
-                        ->modalDescription('Apakah kamu yakin ingin membuat token baru untuk klien ini?')
-                        ->modalSubmitActionLabel('Ya, Generate')
-                        ->action(function (ClientApp $record, Tables\Actions\Action $action) {
+                        ->modalDescription('Pastikan klien dalam status aktif sebelum membuat token baru')
+                        ->modalSubmitActionLabel('Ya Generate')
+                        ->action(function (ClientApp $record) {
                             if (!$record->is_active) {
                                 \Filament\Notifications\Notification::make()
                                     ->title('Gagal')
-                                    ->body('Aktifkan klien terlebih dahulu sebelum membuat token.')
+                                    ->body('Aktifkan klien terlebih dahulu')
                                     ->danger()
                                     ->send();
                                 return;
                             }
 
-                            // Generate Token menggunakan Sanctum
+                            // Proses pembuatan token menggunakan Laravel Sanctum
                             $tokenName = 'Token-' . Str::random(6);
                             $token = $record->createToken($tokenName);
 
                             \Filament\Notifications\Notification::make()
-                                ->title('Token Berhasil Dibuat!')
-                                ->body("API Token Anda: **{$token->plainTextToken}** <br><br> _(Simpan token ini baik-baik! Token tidak akan ditampilkan lagi setelah Anda menutup pesan ini.)_")
+                                ->title('Token Berhasil Dibuat')
+                                ->body("API Token Anda **{$token->plainTextToken}** Simpan token ini dengan aman karena tidak akan ditampilkan kembali")
                                 ->success()
                                 ->persistent()
                                 ->send();
                         }),
                         
+                    // Aksi untuk mencabut seluruh akses token klien
                     Tables\Actions\Action::make('revoke_tokens')
                         ->label('Cabut Semua Token')
                         ->icon('heroicon-m-trash')
                         ->color('danger')
                         ->requiresConfirmation()
                         ->modalHeading('Cabut Akses API')
-                        ->modalDescription('Tindakan ini akan menghapus semua token aktif. Aplikasi klien akan langsung terputus dari sistem. Yakin?')
+                        ->modalDescription('Tindakan ini akan menghapus seluruh token aktif secara permanen')
                         ->action(function (ClientApp $record) {
                             $record->tokens()->delete();
                             \Filament\Notifications\Notification::make()
                                 ->title('Berhasil')
-                                ->body('Semua token untuk klien ini telah dicabut.')
+                                ->body('Seluruh token klien telah dicabut')
                                 ->success()
                                 ->send();
                         }),
@@ -144,6 +165,9 @@ class ClientAppResource extends Resource
             ]);
     }
 
+    /**
+     * Pendaftaran rute halaman resource
+     */
     public static function getPages(): array
     {
         return [

@@ -14,68 +14,107 @@ use Filament\Infolists\Components\Section as InfoSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Grid as InfolistGrid;
 
+/**
+ * Pengaturan Resource Titik Penyaluran
+ * Mengelola data lokasi master distribusi seperti sekolah puskesmas atau posyandu
+ */
 class TitikPenyaluranResource extends Resource
 {
+    // Model referensi data titik penyaluran
     protected static ?string $model = TitikPenyaluran::class;
 
+    // Konfigurasi ikon navigasi pada bilah sisi
     protected static ?string $navigationIcon = 'heroicon-o-map-pin';
+
+    // Label navigasi yang tampil pada menu sidebar
     protected static ?string $navigationLabel = 'Titik Penyaluran';
+
+    // Pengelompokan menu dalam kategori master data
     protected static ?string $navigationGroup = 'Master Data';
 
+    /**
+     * Definisi skema formulir pengelolaan lokasi penyaluran
+     */
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Section::make('Data Master Lokasi')->schema([
                     Forms\Components\TextInput::make('nama_lokasi')
+                        ->label('Nama Lokasi')
                         ->required()
-                        ->placeholder('Contoh: SDN 101877 Helvetia'),
+                        ->placeholder('Contoh SDN 101877 Helvetia'),
+                    
                     Forms\Components\Select::make('jenis_lokasi')
+                        ->label('Kategori Lokasi')
                         ->options([
                             'Sekolah' => 'Sekolah',
                             'Posyandu' => 'Posyandu',
                             'Puskesmas' => 'Puskesmas',
                         ])->required(),
+                    
                     Forms\Components\TextInput::make('penanggung_jawab')
-                        ->label('Nama Kepala/Pimpinan')
+                        ->label('Nama Kepala Pimpinan')
                         ->required(),
+                    
                     Forms\Components\TextInput::make('kontak_person')
-                        ->tel()
-                        ->label('No. WhatsApp Aktif'),
+                        ->label('No WhatsApp Aktif')
+                        ->tel(),
+                    
                     Forms\Components\Textarea::make('alamat')
+                        ->label('Alamat Lengkap')
                         ->required()
                         ->columnSpanFull(),
+                    
                     Forms\Components\TextInput::make('map_url')
+                        ->label('Tautan Google Maps')
                         ->url()
-                        ->label('Link Google Maps')
                         ->columnSpanFull(),
                 ])->columns(2)
             ]);
     }
 
+    /**
+     * Definisi struktur tabel daftar lokasi penyaluran
+     */
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nama_lokasi')->searchable()->weight('bold'),
-                Tables\Columns\TextColumn::make('jenis_lokasi')->badge()->color('info'),
-                Tables\Columns\TextColumn::make('penanggung_jawab')->label('Pimpinan'),
-                Tables\Columns\TextColumn::make('alamat')->limit(30),
+                Tables\Columns\TextColumn::make('nama_lokasi')
+                    ->label('Nama Lokasi')
+                    ->searchable()
+                    ->weight('bold'),
+                
+                Tables\Columns\TextColumn::make('jenis_lokasi')
+                    ->label('Jenis')
+                    ->badge()
+                    ->color('info'),
+                
+                Tables\Columns\TextColumn::make('penanggung_jawab')
+                    ->label('Nama Pimpinan'),
+                
+                Tables\Columns\TextColumn::make('alamat')
+                    ->label('Alamat')
+                    ->limit(30),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\ViewAction::make(),
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\ViewAction::make()->label('Lihat Detail'),
+                    Tables\Actions\EditAction::make()->label('Ubah Data'),
+                    Tables\Actions\DeleteAction::make()->label('Hapus'),
                 ])->button()->label('Aksi')->color('gray'),
             ]);
     }
 
+    /**
+     * Tampilan detail pemetaan dan informasi pimpinan lokasi
+     */
     public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist
             ->schema([
-                InfoSection::make('Informasi Pimpinan & Lokasi')
+                InfoSection::make('Informasi Pimpinan Lokasi')
                     ->schema([
                         TextEntry::make('nama_lokasi')
                             ->hiddenLabel()
@@ -86,7 +125,7 @@ class TitikPenyaluranResource extends Resource
 
                         InfolistGrid::make(3)->schema([
                             TextEntry::make('jenis_lokasi')
-                                ->label('Kategori')
+                                ->label('Kategori Instansi')
                                 ->badge()
                                 ->color(fn (string $state): string => match ($state) {
                                     'Sekolah' => 'success',
@@ -102,28 +141,29 @@ class TitikPenyaluranResource extends Resource
                                 }),
 
                             TextEntry::make('penanggung_jawab')
-                                ->label('Pimpinan / Penanggung Jawab')
+                                ->label('Pimpinan Penanggung Jawab')
                                 ->icon('heroicon-m-user-circle')
                                 ->weight('bold'),
 
                             TextEntry::make('kontak_person')
-                                ->label('Kontak (WhatsApp)')
+                                ->label('Kontak WhatsApp Aktif')
                                 ->icon('heroicon-m-phone')
                                 ->color('success')
                                 ->copyable()
-                                ->copyMessage('Nomor berhasil disalin!'),
+                                ->copyMessage('Nomor berhasil disalin'),
                         ]),
                     ]),
 
-                InfoSection::make('Pemetaan & Alamat')
+                InfoSection::make('Pemetaan Alamat')
                     ->schema([
                         TextEntry::make('alamat')
+                            ->label('Alamat Lengkap')
                             ->icon('heroicon-m-map-pin')
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'italic text-gray-500']),
 
                         TextEntry::make('map_url')
-                            ->label('Google Maps')
+                            ->label('Akses Navigasi')
                             ->icon('heroicon-m-map')
                             ->formatStateUsing(fn () => 'Buka Lokasi di Google Maps')
                             ->url(fn ($record) => $record->map_url)
@@ -135,6 +175,9 @@ class TitikPenyaluranResource extends Resource
             ]);
     }
 
+    /**
+     * Pendaftaran rute halaman resource
+     */
     public static function getPages(): array
     {
         return [

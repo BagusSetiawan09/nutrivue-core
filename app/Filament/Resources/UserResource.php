@@ -25,16 +25,27 @@ use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\Grid as InfolistGrid;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * Pengaturan Resource Manajemen Pengguna
+ * Mengelola data autentikasi hak akses dan profil akun dalam sistem
+ */
 class UserResource extends Resource
 {
+    // Model referensi data pengguna
     protected static ?string $model = User::class;
 
+    // Konfigurasi ikon navigasi pada bilah sisi
     protected static ?string $navigationIcon = 'heroicon-o-users';
     
+    // Label navigasi yang tampil pada menu sidebar
     protected static ?string $navigationLabel = 'Manajemen Pengguna';
 
+    // Pengelompokan menu dalam kategori pengaturan sistem
     protected static ?string $navigationGroup = 'Pengaturan Sistem';
 
+    /**
+     * Membatasi hak akses resource hanya untuk peran super admin
+     */
     public static function canViewAny(): bool
     {
         /** @var \App\Models\User $user */
@@ -42,6 +53,9 @@ class UserResource extends Resource
         return $user->role === 'super_admin';
     }
 
+    /**
+     * Definisi skema formulir pengelolaan akun pengguna
+     */
     public static function form(Form $form): Form
     {
         return $form
@@ -56,7 +70,8 @@ class UserResource extends Resource
                         ->email()
                         ->required()
                         ->maxLength(255)
-                        ->unique(ignoreRecord: true),
+                        ->unique(ignoreRecord: true)
+                        ->label('Alamat Email'),
                         
                     TextInput::make('password')
                         ->password()
@@ -64,21 +79,25 @@ class UserResource extends Resource
                         ->dehydrated(fn ($state) => filled($state))
                         ->required(fn (string $context): bool => $context === 'create')
                         ->maxLength(255)
-                        ->label('Password (Kosongkan jika tidak ingin mengubah)'),
+                        ->label('Kata Sandi')
+                        ->placeholder('Kosongkan jika tidak ada perubahan'),
                         
                     Select::make('role')
                         ->options([
-                            'super_admin' => 'Super Admin (Dinas)',
+                            'super_admin' => 'Super Admin Dinas',
                             'petugas' => 'Petugas Lapangan',
                             'masyarakat' => 'Masyarakat Umum',
                         ])
                         ->required()
                         ->default('masyarakat')
-                        ->label('Hak Akses (Role)'),
+                        ->label('Hak Akses Role'),
                 ])->columns(2)
             ]);
     }
 
+    /**
+     * Definisi struktur tabel daftar seluruh pengguna
+     */
     public static function table(Table $table): Table
     {
         return $table
@@ -89,17 +108,18 @@ class UserResource extends Resource
                     ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name=' . urlencode($record->name) . '&color=FFFFFF&background=0284c7'),
 
                 TextColumn::make('name')
+                    ->label('Nama Pengguna')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold')
-                    ->label('Nama Pengguna'),
+                    ->weight('bold'),
                     
                 TextColumn::make('email')
+                    ->label('Alamat Email')
                     ->searchable()
-                    ->icon('heroicon-m-envelope')
-                    ->label('Alamat Email'),
+                    ->icon('heroicon-m-envelope'),
                     
                 TextColumn::make('role')
+                    ->label('Hak Akses')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'super_admin' => 'danger',
@@ -111,23 +131,22 @@ class UserResource extends Resource
                         'super_admin' => 'Super Admin',
                         'petugas' => 'Petugas Lapangan',
                         'masyarakat' => 'Masyarakat',
-                        default => 'Unknown',
-                    })
-                    ->label('Hak Akses'),
+                        default => 'Tidak Diketahui',
+                    }),
                     
                 TextColumn::make('created_at')
+                    ->label('Tanggal Terdaftar')
                     ->dateTime('d M Y')
-                    ->sortable()
-                    ->label('Tanggal Terdaftar'),
+                    ->sortable(),
             ])
             ->filters([
-                //
+                // Filter dapat ditambahkan sesuai kebutuhan manajemen
             ])
             ->actions([
                 ActionGroup::make([
-                    ViewAction::make(),
-                    EditAction::make(),
-                    DeleteAction::make(),
+                    ViewAction::make()->label('Lihat Detail'),
+                    EditAction::make()->label('Ubah Akun'),
+                    DeleteAction::make()->label('Hapus Akses'),
                 ])
                 ->button()
                 ->color('gray')
@@ -140,6 +159,9 @@ class UserResource extends Resource
             ]);
     }
 
+    /**
+     * Tampilan informasi profil dan detail teknis akun
+     */
     public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist
@@ -162,15 +184,15 @@ class UserResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                InfoSection::make('Detail Akun')
+                InfoSection::make('Detail Keamanan Akun')
                     ->schema([
                         InfolistGrid::make(3)->schema([
                             TextEntry::make('email')
-                                ->label('Alamat Email')
+                                ->label('Alamat Email Aktif')
                                 ->icon('heroicon-m-envelope'),
                                 
                             TextEntry::make('role')
-                                ->label('Hak Akses')
+                                ->label('Tingkat Hak Akses')
                                 ->badge()
                                 ->color(fn (string $state): string => match ($state) {
                                     'super_admin' => 'danger',
@@ -182,11 +204,11 @@ class UserResource extends Resource
                                     'super_admin' => 'Super Admin',
                                     'petugas' => 'Petugas Lapangan',
                                     'masyarakat' => 'Masyarakat',
-                                    default => 'Unknown',
+                                    default => 'Tidak Diketahui',
                                 }),
                                 
                             TextEntry::make('created_at')
-                                ->label('Terdaftar Sejak')
+                                ->label('Bergabung Sejak')
                                 ->date('d F Y')
                                 ->icon('heroicon-m-calendar-days'),
                         ]),
@@ -194,13 +216,19 @@ class UserResource extends Resource
             ]);
     }
 
+    /**
+     * Definisi relasi antar model pengguna
+     */
     public static function getRelations(): array
     {
         return [
-            //
+            // Relasi tambahan dapat didefinisikan di sini
         ];
     }
 
+    /**
+     * Pendaftaran rute halaman resource
+     */
     public static function getPages(): array
     {
         return [
