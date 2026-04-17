@@ -1,8 +1,11 @@
 @php
+    // Inisialisasi data makronutrisi dari rekaman menu
     $record = $getRecord();
     $protein = $record->protein ?? 0;
     $karbo = $record->karbohidrat ?? 0;
     $lemak = $record->lemak ?? 0;
+    
+    // Validasi keberadaan data untuk menentukan visibilitas grafik
     $hasData = $protein > 0 || $karbo > 0 || $lemak > 0;
 @endphp
 
@@ -11,6 +14,7 @@
     <div
         x-data="{
             chart: null,
+            // Inisialisasi pustaka grafik saat komponen dimuat
             init() {
                 if (typeof Chart === 'undefined') {
                     const script = document.createElement('script');
@@ -21,6 +25,7 @@
                     this.drawChart();
                 }
             },
+            // Logika penggambaran grafik komposisi gizi
             drawChart() {
                 const ctx = this.$refs.canvas.getContext('2d');
                 this.chart = new Chart(ctx, {
@@ -57,6 +62,6 @@
         <canvas x-ref="canvas"></canvas>
     </div>
     @else
-        <p style="color: #9ca3af; font-style: italic;">Data gizi belum lengkap untuk menampilkan grafik visual.</p>
+        <p style="color: #9ca3af; font-style: italic;">Informasi komposisi gizi belum tersedia untuk visualisasi</p>
     @endif
 </div>
