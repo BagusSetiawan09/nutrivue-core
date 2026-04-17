@@ -1,4 +1,4 @@
-name: Deploy Laravel Backend (cPanel Cloud)
+name: Deploy Laravel Backend to cPanel
 
 on:
   push:
@@ -10,34 +10,39 @@ jobs:
     name: Deployment Progress
     runs-on: ubuntu-latest
     steps:
-    - name: Mengambil Kode Terbaru
+    - name: 1. 1Mengambil Kode Terbaru
       uses: actions/checkout@v4
 
-    - name: Setup Versi PHP
+    - name: 2. Setup Versi PHP
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, bcmath, fileinfo
 
-    - name: Install Dependencies (Composer)
+    - name: 3. Install Dependencies (Composer)
       run: composer install --no-dev --optimize-autoloader --no-ansi --no-interaction --no-scripts --prefer-dist
 
-    - name: Sinkronisasi File ke Hosting via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+    - name: 4. Bungkus Semua Kodingan (Jadi 1 File)
+      run: tar -czf deploy.tar.gz --exclude='.git' --exclude='tests' --exclude='.env' .
+
+    - name: 5. Kirim Koper ke cPanel (Via SCP/SSH)
+      uses: appleboy/scp-action@master
       with:
-        server: ${{ secrets.FTP_SERVER }}
+        host: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        server-dir: /nourish-backend/ 
-        protocol: ftps
-        exclude: |
-          **/.git*
-          **/.git*/**
-          **/node_modules/**
-          **/tests/**
-          **/vendor/**
-          .env
-          .env.example
-          phpunit.xml
-          README.md
-          .editorconfig
+        port: 22
+        source: "deploy.tar.gz"
+        target: "nourish-backend"
+
+    - name: 6. Buka Koper di Dalam cPanel
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        port: 22
+        script: |
+          cd nourish-backend
+          tar -xzf deploy.tar.gz
+          rm deploy.tar.gz
