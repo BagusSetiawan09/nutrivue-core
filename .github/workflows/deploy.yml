@@ -1,0 +1,41 @@
+name: Deploy Laravel Backend (cPanel Cloud)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  web-deploy:
+    name: Deployment Progress
+    runs-on: ubuntu-latest
+    steps:
+    - name: Mengambil Kode Terbaru
+      uses: actions/checkout@v4
+
+    - name: Setup Versi PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, bcmath, fileinfo
+
+    - name: Install Dependencies (Composer)
+      run: composer install --no-dev --optimize-autoloader --no-ansi --no-interaction --no-scripts --prefer-dist
+
+    - name: Sinkronisasi File ke Hosting via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        server-dir: /nourish-backend/ 
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/tests/**
+          .env
+          .env.example
+          phpunit.xml
+          README.md
+          .editorconfig
