@@ -8,17 +8,23 @@ use App\Models\MealClaim;
 use Illuminate\Support\Facades\Crypt;
 use Carbon\Carbon;
 
+/**
+ * Pengaturan Kontroler Distribusi Makanan
+ * Mengelola pembuatan kode qr bagi pengguna dan verifikasi pindaian oleh mitra lapangan
+ */
 class MealController
 {
-    // ==========================================================
-    // 1. FUNGSI UNTUK USER: GENERATE QR CODE AMAN (DI HP USER)
-    // ==========================================================
+    /**
+     * Menghasilkan muatan data qr code terenkripsi untuk sisi pengguna
+     * Memastikan pembuatan kode hanya berlaku satu kali dalam periode hari yang sama
+     */
     public function generateQr(Request $request)
     {
-        $user = $request->user(); // Ambil data user yang sedang login dari Token
-        $today = Carbon::today()->toDateString(); // Tanggal hari ini, misal: 2026-04-17
+        // Identifikasi pengguna aktif melalui token akses
+        $user = $request->user(); 
+        $today = Carbon::today()->toDateString(); 
 
-        // Cek apakah user sudah mengambil jatah hari ini
+        // Validasi ketersediaan jatah makan berdasarkan tanggal distribusi hari ini
         $alreadyClaimed = MealClaim::where('user_id', $user->id)
                                    ->where('claim_date', $today)
                                    ->exists();
@@ -26,32 +32,35 @@ class MealController
         if ($alreadyClaimed) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Anda sudah mengambil jatah makan hari ini.'
+                'message' => 'Anda telah tercatat menggunakan jatah makan hari ini'
             ], 403);
         }
 
-        // BUAT PAYLOAD QR ANTI-MALING (Di-enkripsi oleh Laravel)
-        // Format rahasia: "ID_USER|TANGGAL_HARI_INI"
+        /**
+         * Pembuatan muatan data enkripsi tingkat tinggi
+         * Menggabungkan identitas pengguna dan tanggal guna mencegah duplikasi data
+         */
         $rawPayload = $user->id . '|' . $today;
         $encryptedQr = Crypt::encryptString($rawPayload);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'QR Code berhasil di-generate',
-            'qr_data' => $encryptedQr // String panjang acak ini yang akan diubah jadi Gambar QR di React Native
+            'message' => 'Kode QR berhasil diterbitkan oleh sistem',
+            'qr_data' => $encryptedQr 
         ]);
     }
 
-    // ==========================================================
-    // 2. FUNGSI UNTUK MITRA: SCAN & VERIFIKASI QR DARI USER
-    // ==========================================================
+    /**
+     * Menjalankan proses verifikasi data qr code dari sisi mitra
+     * Melakukan validasi integritas data masa berlaku dan status pengambilan jatah
+     */
     public function verifyQr(Request $request)
     {
         try {
-            // Mitra mengirimkan string QR hasil scan
+            // Menerima muatan data qr dari perangkat pindaian mitra
             $encryptedQr = $request->qr_data; 
             
-            // Bongkar enkripsi
+            // Dekripsi muatan data rahasia sistem
             $decryptedPayload = Crypt::decryptString($encryptedQr);
             $payloadParts = explode('|', $decryptedPayload);
 
@@ -59,15 +68,21 @@ class MealController
             $qrDate = $payloadParts[1];
             $today = Carbon::today()->toDateString();
 
-            // 1. CEK KEDALUWARSA: Apakah ini QR hari ini atau hasil screenshot kemarin?
+            /**
+             * Pemeriksaan masa aktif kode qr
+             * Memastikan data yang dipindai bukan merupakan tangkapan layar dari hari sebelumnya
+             */
             if ($qrDate !== $today) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'QR Code Kedaluwarsa! Ini adalah kode untuk tanggal ' . $qrDate
+                    'message' => 'Masa berlaku kode qr telah berakhir untuk tanggal ' . $qrDate
                 ], 400);
             }
 
-            // 2. CEK DATABASE: Apakah user ini mencoba double-claim?
+            /**
+             * Validasi data distribusi dalam basis data
+             * Mencegah upaya klaim berulang oleh pengguna pada hari yang sama
+             */
             $alreadyClaimed = MealClaim::where('user_id', $userId)
                                        ->where('claim_date', $today)
                                        ->exists();
@@ -75,31 +90,31 @@ class MealController
             if ($alreadyClaimed) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'DITOLAK! Pengguna ini SUDAH mengambil jatah hari ini.'
+                    'message' => 'Akses ditolak pengguna telah melakukan klaim hari ini'
                 ], 403);
             }
 
-            // 3. AMBIL DATA REAL USER UNTUK PENCOCOKAN WAJAH OLEH MITRA
+            // Pengambilan data profil pengguna untuk proses validasi visual oleh mitra
             $user = User::find($userId);
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'VERIFIKASI BERHASIL. Silakan cocokkan data penerima.',
+                'message' => 'Verifikasi berhasil silakan sesuaikan data identitas penerima',
                 'data' => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'kategori' => $user->kategori,
                     'alamat' => $user->alamat,
                     'tempat_lahir' => $user->tempat_lahir,
-                    'photo_url' => $user->photo ? asset('storage/' . $user->photo) : 'no-photo', // Siap untuk fitur foto nanti
+                    'photo_url' => $user->photo ? asset('storage/' . $user->photo) : 'no-photo',
                 ]
             ]);
 
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            // Jika seseorang mencoba memalsukan QR dengan string sembarangan
+            // Penanganan terhadap upaya manipulasi atau pemalsuan muatan data qr
             return response()->json([
                 'status' => 'error',
-                'message' => 'QR CODE PALSU ATAU TIDAK VALID!'
+                'message' => 'Kode QR tidak dikenali atau terdeteksi hasil manipulasi'
             ], 400);
         }
     }

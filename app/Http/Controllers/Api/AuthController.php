@@ -2,25 +2,28 @@
 
 namespace App\Http\Controllers\Api;
 
-// use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-// use Illuminate\Support\Facades\Validator;
 
+/**
+ * Pengaturan Autentikasi API
+ * Mengelola pendaftaran masuk dan keluar akun melalui protokol Sanctum
+ */
 class AuthController
 {
-    // ==========================================
-    // 1. FUNGSI UNTUK MENDAFTAR (REGISTER)
-    // ==========================================
+    /**
+     * Menangani pendaftaran pengguna baru ke dalam sistem
+     * Menyimpan data profil serta melakukan enkripsi pada kata sandi
+     */
     public function register(Request $request)
     {
         try {
-            // Memasukkan data ke dalam Database
+            // Proses penyimpanan data ke tabel pengguna
             $user = User::create([
                 'name'          => $request->name,
                 'email'         => $request->email,
-                'password'      => Hash::make($request->password), // Password wajib dienkripsi
+                'password'      => Hash::make($request->password), 
                 'kategori'      => $request->kategori,
                 'tempat_lahir'  => $request->tempat_lahir,
                 'tanggal_lahir' => $request->tanggal_lahir,
@@ -28,76 +31,80 @@ class AuthController
                 'phone'         => $request->phone,
             ]);
 
-            // Memberikan jawaban sukses ke HP (React Native)
+            // Mengirim respon sukses pendaftaran dalam format json
             return response()->json([
                 'status'  => 'success',
-                'message' => 'Pendaftaran berhasil!',
+                'message' => 'Pendaftaran akun berhasil dilakukan',
                 'data'    => $user
             ], 201);
 
         } catch (\Exception $error) {
-            // Jika gagal (misal email sudah ada), kirim pesan error
+            // Menangani kegagalan proses pendaftaran akun
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Gagal mendaftar: ' . $error->getMessage()
+                'message' => 'Gagal melakukan pendaftaran ' . $error->getMessage()
             ], 500);
         }
     }
 
-    // ==========================================
-    // 2. FUNGSI UNTUK MASUK (LOGIN)
-    // ==========================================
+    /**
+     * Menangani proses masuk pengguna ke dalam sistem
+     * Memvalidasi kredensial dan menerbitkan token akses api
+     */
     public function login(Request $request)
     {
         try {
-            // Cari user berdasarkan email yang diinput
+            // Identifikasi pengguna melalui alamat email terdaftar
             $user = User::where('email', $request->email)->first();
 
-            // Cek apakah user ada DAN apakah password yang diinput cocok dengan di database
+            // Validasi keberadaan akun dan kecocokan kata sandi
             if (!$user || !Hash::check($request->password, $user->password)) {
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'Email atau Kata Sandi salah!'
-                ], 401); // 401 = Unauthorized (Ditolak)
+                    'message' => 'Alamat email atau kata sandi tidak valid'
+                ], 401); 
             }
 
-            // Jika cocok, buatkan Token Kunci (Sanctum) untuk sesi login ini
+            // Penerbitan token akses baru melalui Laravel Sanctum
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            // Kirim Token dan Data User ke HP
+            // Mengirim respon sukses login beserta token akses
             return response()->json([
                 'status'  => 'success',
-                'message' => 'Login berhasil!',
+                'message' => 'Proses masuk sistem berhasil',
                 'data'    => $user,
-                'token'   => $token // Ini akan disimpan di AsyncStorage HP
+                'token'   => $token 
             ], 200);
 
         } catch (\Exception $error) {
+            // Menangani kesalahan sistem saat proses masuk
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Terjadi kesalahan sistem: ' . $error->getMessage()
+                'message' => 'Terjadi kesalahan sistem internal ' . $error->getMessage()
             ], 500);
         }
     }
 
-    // ==========================================
-    // 3. FUNGSI UNTUK KELUAR (LOGOUT)
-    // ==========================================
+    /**
+     * Menangani proses keluar pengguna dari sistem
+     * Menghapus token akses yang digunakan pada sesi aktif
+     */
     public function logout(Request $request)
     {
         try {
-            // Hapus / hancurkan token yang sedang dipakai saat ini
+            // Penghapusan token akses aktif pada perangkat pengguna
             $request->user()->currentAccessToken()->delete();
 
             return response()->json([
                 'status'  => 'success',
-                'message' => 'Anda telah berhasil keluar.'
+                'message' => 'Berhasil keluar dari sesi aplikasi'
             ], 200);
 
         } catch (\Exception $error) {
+            // Menangani kegagalan saat proses penghapusan sesi
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Gagal keluar: ' . $error->getMessage()
+                'message' => 'Gagal mengakhiri sesi akses ' . $error->getMessage()
             ], 500);
         }
     }
