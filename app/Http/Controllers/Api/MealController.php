@@ -118,4 +118,44 @@ class MealController
             ], 400);
         }
     }
+
+    /**
+     * Mengambil informasi menu makanan untuk hari ini beserta nilai gizinya
+     * Ditampilkan secara real-time pada dashboard aplikasi pengguna
+     */
+    public function getTodayMenu(Request $request)
+    {
+        try {
+            // Mengambil menu terbaru yang didaftarkan oleh admin (bisa disesuaikan dengan tanggal nanti)
+            $menu = \App\Models\Menu::latest()->first();
+
+            if (!$menu) {
+                return response()->json([
+                    'status' => 'success',
+                    'data' => [
+                        'kalori' => 0,
+                        'protein' => 0,
+                        'lemak' => 0,
+                        'nama_menu' => 'Menu Belum Ditentukan'
+                    ]
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'kalori' => $menu->kalori ?? 0,
+                    'protein' => $menu->protein ?? 0,
+                    'lemak' => $menu->lemak ?? 0,
+                    'nama_menu' => $menu->nama_menu ?? 'Menu Sehat Hari Ini'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil data nutrisi dari server'
+            ], 500);
+        }
+    }
 }

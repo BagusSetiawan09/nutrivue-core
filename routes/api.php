@@ -45,5 +45,8 @@ Route::middleware('auth:sanctum')->group(function () {
         
         // Verifikasi kode qr oleh mitra atau petugas lapangan
         Route::post('/verify-qr', [MealController::class, 'verifyQr']);
+
+        // Rute untuk mengambil data nutrisi hari ini
+        Route::get('/today-menu', [MealController::class, 'getTodayMenu']);
     });
 });
