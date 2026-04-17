@@ -23,12 +23,13 @@ jobs:
       run: composer install --no-dev --optimize-autoloader --no-ansi --no-interaction --no-scripts --prefer-dist
 
     - name: Sinkronisasi File ke Hosting via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         server-dir: /nourish-backend/ 
+        protocol: ftps
         exclude: |
           **/.git*
           **/.git*/**
