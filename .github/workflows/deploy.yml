@@ -34,6 +34,7 @@ jobs:
           **/.git*/**
           **/node_modules/**
           **/tests/**
+          **/vendor/**
           .env
           .env.example
           phpunit.xml
