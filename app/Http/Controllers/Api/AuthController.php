@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Pengaturan Autentikasi API
@@ -14,12 +15,39 @@ class AuthController
 {
     /**
      * Menangani pendaftaran pengguna baru ke dalam sistem
-     * Menyimpan data profil serta melakukan enkripsi pada kata sandi
      */
     public function register(Request $request)
     {
+        // 1. PENJAGA GERBANG (VALIDASI)
+        // Mencegah error SQL bocor ke frontend
+        $validator = Validator::make($request->all(), [
+            'name'          => 'required|string|max:255',
+            'email'         => 'required|string|email|max:255|unique:users,email', // KUNCI UTAMA: Cek duplikat email
+            'password'      => 'required|string|min:8',
+            'kategori'      => 'required|string',
+            'tempat_lahir'  => 'required|string',
+            'tanggal_lahir' => 'required|string',
+            'alamat'        => 'required|string',
+            'phone'         => 'required|string',
+        ], [
+            // Pesan error custom dalam Bahasa Indonesia
+            'email.unique'   => 'Email ini sudah terdaftar. Silakan gunakan email lain atau coba masuk (Login).',
+            'email.required' => 'Alamat email wajib diisi.',
+            'email.email'    => 'Format email tidak valid.',
+            'password.min'   => 'Kata sandi minimal 8 karakter.',
+        ]);
+
+        // 2. JIKA VALIDASI GAGAL (Contoh: Email sudah ada)
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $validator->errors()->first(), // Mengambil pesan error pertama (misal: "Email ini sudah terdaftar...")
+                'errors'  => $validator->errors()
+            ], 422); // Gunakan kode 422 Unprocessable Entity
+        }
+
         try {
-            // Proses penyimpanan data ke tabel pengguna
+            // 3. JIKA LOLOS VALIDASI, SIMPAN KE DATABASE
             $user = User::create([
                 'name'          => $request->name,
                 'email'         => $request->email,
@@ -31,7 +59,7 @@ class AuthController
                 'phone'         => $request->phone,
             ]);
 
-            // Mengirim respon sukses pendaftaran dalam format json
+            // Mengirim respon sukses
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Pendaftaran akun berhasil dilakukan',
@@ -39,25 +67,22 @@ class AuthController
             ], 201);
 
         } catch (\Exception $error) {
-            // Menangani kegagalan proses pendaftaran akun
+            // Menangani kegagalan sistem (Database down, dll)
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Gagal melakukan pendaftaran ' . $error->getMessage()
+                'message' => 'Gagal melakukan pendaftaran. Kesalahan server.'
             ], 500);
         }
     }
 
     /**
      * Menangani proses masuk pengguna ke dalam sistem
-     * Memvalidasi kredensial dan menerbitkan token akses api
      */
     public function login(Request $request)
     {
         try {
-            // Identifikasi pengguna melalui alamat email terdaftar
             $user = User::where('email', $request->email)->first();
 
-            // Validasi keberadaan akun dan kecocokan kata sandi
             if (!$user || !Hash::check($request->password, $user->password)) {
                 return response()->json([
                     'status'  => 'error',
@@ -65,10 +90,8 @@ class AuthController
                 ], 401); 
             }
 
-            // Penerbitan token akses baru melalui Laravel Sanctum
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            // Mengirim respon sukses login beserta token akses
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Proses masuk sistem berhasil',
@@ -77,22 +100,19 @@ class AuthController
             ], 200);
 
         } catch (\Exception $error) {
-            // Menangani kesalahan sistem saat proses masuk
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Terjadi kesalahan sistem internal ' . $error->getMessage()
+                'message' => 'Terjadi kesalahan sistem internal.'
             ], 500);
         }
     }
 
     /**
      * Menangani proses keluar pengguna dari sistem
-     * Menghapus token akses yang digunakan pada sesi aktif
      */
     public function logout(Request $request)
     {
         try {
-            // Penghapusan token akses aktif pada perangkat pengguna
             $request->user()->currentAccessToken()->delete();
 
             return response()->json([
@@ -101,10 +121,9 @@ class AuthController
             ], 200);
 
         } catch (\Exception $error) {
-            // Menangani kegagalan saat proses penghapusan sesi
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Gagal mengakhiri sesi akses ' . $error->getMessage()
+                'message' => 'Gagal mengakhiri sesi akses.'
             ], 500);
         }
     }
