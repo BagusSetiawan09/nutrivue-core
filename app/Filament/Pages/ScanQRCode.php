@@ -44,6 +44,16 @@ class ScanQRCode extends Page
     public string $scanMessage = 'Sistem Siap Menunggu pindaian';
 
     /**
+     * 🛡️ JURUS BLOKIR HALAMAN SCAN:
+     * Halaman dan menu ini HANYA akan muncul untuk Super Admin dan Petugas.
+     * Pemerintah dan Masyarakat tidak akan bisa melihat apalagi mengaksesnya!
+     */
+    public static function canAccess(): bool
+    {
+        return in_array(auth()->user()->role, ['super_admin', 'petugas']);
+    }
+
+    /**
      * Memproses dan memvalidasi data QR Code terenkripsi
      */
     public function verifyScannedQr($encryptedQr)
@@ -104,13 +114,13 @@ class ScanQRCode extends Page
 
             if ($existingClaim) {
                 $this->scanStatus = 'error';
-                $timeClaimed = $existingClaim->created_at->format('H:i WIB'); 
+                $this->timeClaimed = $existingClaim->created_at->format('H:i WIB'); 
                 
-                $this->scanMessage = "Klaim Ganda Terdeteksi Penerima telah mengambil jatah pada pukul {$timeClaimed}";
+                $this->scanMessage = "Klaim Ganda Terdeteksi Penerima telah mengambil jatah pada pukul {$this->timeClaimed}";
 
                 Notification::make()
                     ->title('Peringatan Klaim Ganda')
-                    ->body("Jatah makan pengguna ini telah didistribusikan pada {$timeClaimed}")
+                    ->body("Jatah makan pengguna ini telah didistribusikan pada {$this->timeClaimed}")
                     ->warning()
                     ->send();
 

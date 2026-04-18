@@ -44,7 +44,9 @@ class UserResource extends Resource
     protected static ?string $navigationGroup = 'Pengaturan Sistem';
 
     /**
-     * Membatasi hak akses resource hanya untuk peran super admin
+     * 🛡️ KUNCI PINTU UTAMA: 
+     * Membatasi hak akses resource HANYA untuk peran super_admin.
+     * Menu ini otomatis HILANG untuk Pemerintah dan Petugas!
      */
     public static function canViewAny(): bool
     {
@@ -86,6 +88,7 @@ class UserResource extends Resource
                         ->options([
                             'super_admin' => 'Super Admin Dinas',
                             'petugas' => 'Petugas Lapangan',
+                            'pemerintah' => 'Pemerintah Eksekutif',
                             'masyarakat' => 'Masyarakat Umum',
                         ])
                         ->required()
@@ -124,12 +127,14 @@ class UserResource extends Resource
                     ->color(fn (string $state): string => match ($state) {
                         'super_admin' => 'danger',
                         'petugas' => 'warning',
+                        'pemerintah' => 'info',
                         'masyarakat' => 'success',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'super_admin' => 'Super Admin',
                         'petugas' => 'Petugas Lapangan',
+                        'pemerintah' => 'Pemerintah Eksekutif',
                         'masyarakat' => 'Masyarakat',
                         default => 'Tidak Diketahui',
                     }),
@@ -197,12 +202,14 @@ class UserResource extends Resource
                                 ->color(fn (string $state): string => match ($state) {
                                     'super_admin' => 'danger',
                                     'petugas' => 'warning',
+                                    'pemerintah' => 'info',
                                     'masyarakat' => 'success',
                                     default => 'gray',
                                 })
                                 ->formatStateUsing(fn (string $state): string => match ($state) {
                                     'super_admin' => 'Super Admin',
                                     'petugas' => 'Petugas Lapangan',
+                                    'pemerintah' => 'Pemerintah Eksekutif',
                                     'masyarakat' => 'Masyarakat',
                                     default => 'Tidak Diketahui',
                                 }),
@@ -216,19 +223,11 @@ class UserResource extends Resource
             ]);
     }
 
-    /**
-     * Definisi relasi antar model pengguna
-     */
     public static function getRelations(): array
     {
-        return [
-            // Relasi tambahan dapat didefinisikan di sini
-        ];
+        return [];
     }
 
-    /**
-     * Pendaftaran rute halaman resource
-     */
     public static function getPages(): array
     {
         return [

@@ -38,14 +38,18 @@ class MenuResource extends Resource
     // Label navigasi yang tampil pada menu sidebar
     protected static ?string $navigationLabel = 'Jadwal Menu MBG';
 
-    /**
-     * Membatasi visibilitas menu hanya untuk super admin dan petugas
-     */
+    public static function getNavigationGroup(): ?string
+    {
+        return auth()->user()->role === 'pemerintah' 
+            ? 'Laporan Eksekutif' 
+            : 'Distribusi Makanan';
+    }
+
     public static function canViewAny(): bool
     {
         /** @var \App\Models\User $user */
         $user = auth()->user();
-        return in_array($user->role, ['super_admin', 'petugas']);
+        return in_array($user->role, ['super_admin', 'petugas', 'pemerintah']);
     }
 
     /**
@@ -58,8 +62,18 @@ class MenuResource extends Resource
         return $user->role === 'super_admin';
     }
 
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->role !== 'pemerintah';
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->role !== 'pemerintah';
+    }
+
     /**
-     * Membatasi hak penghapusan data hanya untuk peran super admin
+     * Membatasi hak penghapusan massal hanya untuk peran super admin
      */
     public static function canDeleteAny(): bool
     {
@@ -199,18 +213,18 @@ class MenuResource extends Resource
                     ->searchable(),
             ])
             ->filters([
-                // Filter kustom dapat ditambahkan di sini
+                //
             ])
             ->actions([
                 ActionGroup::make([
                     ViewAction::make()->label('Lihat Detail'),
                     EditAction::make()->label('Ubah Data'),
                     
-                    // Aksi cepat untuk memperbarui status distribusi
                     Action::make('ubah_status')
                         ->label('Ubah Status')
                         ->icon('heroicon-m-arrow-path')
                         ->color('info') 
+                        ->visible(fn () => auth()->user()->role !== 'pemerintah')
                         ->form([
                             Forms\Components\Select::make('status')
                                 ->label('Pilih Status Terbaru')
@@ -351,4 +365,5 @@ class MenuResource extends Resource
             'edit' => Pages\EditMenu::route('/{record}/edit'),
         ];
     }
+
 }

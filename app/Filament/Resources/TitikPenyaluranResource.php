@@ -29,8 +29,12 @@ class TitikPenyaluranResource extends Resource
     // Label navigasi yang tampil pada menu sidebar
     protected static ?string $navigationLabel = 'Titik Penyaluran';
 
-    // Pengelompokan menu dalam kategori master data
-    protected static ?string $navigationGroup = 'Master Data';
+    public static function getNavigationGroup(): ?string
+    {
+        return auth()->user()->role === 'pemerintah' 
+            ? 'Laporan Eksekutif' 
+            : 'Master Data';
+    }
 
     /**
      * Definisi skema formulir pengelolaan lokasi penyaluran
@@ -185,5 +189,21 @@ class TitikPenyaluranResource extends Resource
             'create' => Pages\CreateTitikPenyaluran::route('/create'),
             'edit' => Pages\EditTitikPenyaluran::route('/{record}/edit'),
         ];
+    }
+
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->role !== 'pemerintah';
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->role !== 'pemerintah';
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->role !== 'pemerintah';
     }
 }
