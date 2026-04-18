@@ -66,6 +66,14 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return true; 
+        // 🛡️ JURUS IZIN MASUK DASHBOARD:
+        // Hanya role yang kita tentukan yang boleh masuk ke Admin Panel.
+        // Masyarakat TIDAK BOLEH masuk (Forbidden).
+        
+        return in_array($this->role, [
+            'super_admin', 
+            'petugas', 
+            'pemerintah'
+        ]);
     }
 }
