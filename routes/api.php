@@ -54,5 +54,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Rute untuk mendapatkan statistik distribusi makanan
         Route::get('/meal/statistics', [MealController::class, 'getStatistics']);
+
+        // Rute untuk memperbarui profil pengguna
+        Route::post('/profile/update', [AuthController::class, 'updateProfile']);
     });
 });

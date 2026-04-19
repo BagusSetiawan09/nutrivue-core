@@ -127,4 +127,57 @@ class AuthController
             ], 500);
         }
     }
+
+    /**
+     * Menangani pembaruan data profil pengguna
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user(); // Mengambil data user yang sedang login
+
+        // 1. VALIDASI DATA
+        $validator = Validator::make($request->all(), [
+            'name'         => 'required|string|max:255',
+            // KUNCI PENTING: Cek duplikat email, KECUALI email milik user ini sendiri
+            'email'        => 'required|string|email|max:255|unique:users,email,' . $user->id, 
+            'phone'        => 'nullable|string',
+            'alamat'       => 'nullable|string',
+            'tempat_lahir' => 'nullable|string',
+        ], [
+            'email.unique'   => 'Email ini sudah terdaftar oleh pengguna lain.',
+            'email.required' => 'Alamat email wajib diisi.',
+            'name.required'  => 'Nama lengkap wajib diisi.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $validator->errors()->first(),
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            // 2. PROSES PEMBARUAN KE DATABASE
+            $user->update([
+                'name'         => $request->name,
+                'email'        => $request->email,
+                'phone'        => $request->phone ?? $user->phone,
+                'alamat'       => $request->alamat ?? $user->alamat,
+                'tempat_lahir' => $request->tempat_lahir ?? $user->tempat_lahir,
+            ]);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Profil berhasil diperbarui',
+                'data'    => $user // Mengembalikan data terbaru untuk disimpan di AsyncStorage
+            ], 200);
+
+        } catch (\Exception $error) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal memperbarui profil. Kesalahan server.'
+            ], 500);
+        }
+    }
 }
