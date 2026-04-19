@@ -66,6 +66,92 @@ class MealController
     }
 
     /**
+     * Mengambil Jadwal Menu 3 Hari ke Depan Berdasarkan Target Penerima
+     * Diformat khusus untuk PieChart di React Native MenuScreen
+     */
+    public function getSchedule(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            // 1. Pemetaan cerdas kategori user ke target_penerima di tabel Menu
+            $targetPenerima = 'Siswa'; // Default
+            if (in_array(strtolower($user->kategori), ['ibu_hamil', 'ibu hamil'])) {
+                $targetPenerima = 'Ibu Hamil';
+            } elseif (in_array(strtolower($user->kategori), ['ibu_balita', 'balita'])) {
+                $targetPenerima = 'Balita';
+            } elseif (strtolower($user->kategori) === 'siswa') {
+                $targetPenerima = 'Siswa';
+            }
+
+            // 2. Siapkan 3 Tanggal Utama
+            $today = Carbon::today()->toDateString();
+            $tomorrow = Carbon::tomorrow()->toDateString();
+            $lusa = Carbon::today()->addDays(2)->toDateString();
+
+            // 3. Tarik data menu dari database berdasarkan tanggal & target
+            $menus = Menu::whereIn('tanggal_distribusi', [$today, $tomorrow, $lusa])
+                        ->where('target_penerima', $targetPenerima)
+                        ->get()
+                        ->keyBy('tanggal_distribusi');
+
+            // 4. Fungsi internal untuk merakit data sesuai selera frontend PieChart
+            $formatMenu = function ($menu) {
+                if (!$menu) return null;
+                
+                return [
+                    'title' => $menu->nama_menu,
+                    // Jika ada foto, jadikan link URL penuh. Jika tidak, pakai gambar default.
+                    'image' => $menu->foto_makanan ? asset('storage/' . $menu->foto_makanan) : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop',
+                    'description' => $menu->deskripsi ?? 'Deskripsi menu belum dilengkapi.',
+                    'calories' => $menu->kalori ?? 0,
+                    'macros' => [
+                        [
+                            'name' => 'Protein',
+                            'population' => (int) ($menu->protein ?? 0),
+                            'color' => '#6366F1', // Indigo untuk Protein
+                            'description' => 'Sangat penting untuk perbaikan sel dan pertumbuhan.'
+                        ],
+                        [
+                            'name' => 'Lemak',
+                            'population' => (int) ($menu->lemak ?? 0),
+                            'color' => '#F43F5E', // Rose untuk Lemak
+                            'description' => 'Sumber energi cadangan dan membantu penyerapan vitamin.'
+                        ],
+                        [
+                            'name' => 'Karbohidrat',
+                            'population' => (int) ($menu->karbohidrat ?? 0),
+                            'color' => '#14B8A6', // Teal untuk Karbohidrat
+                            'description' => 'Sumber energi utama untuk otak dan aktivitas harian.'
+                        ]
+                    ]
+                ];
+            };
+
+            // 5. Susun hasil akhir sesuai kunci Hari yang diminta Frontend
+            $data = [
+                'Hari Ini' => $formatMenu($menus->get($today)),
+                'Besok'    => $formatMenu($menus->get($tomorrow)),
+                'Lusa'     => $formatMenu($menus->get($lusa)),
+            ];
+
+            // Bersihkan hari yang tidak ada jadwalnya (null) agar frontend merespon dengan rapi
+            $data = array_filter($data);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil jadwal menu: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Menghasilkan muatan data qr code terenkripsi
      */
     public function generateQr(Request $request)

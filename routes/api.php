@@ -48,5 +48,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Rute untuk mengambil data nutrisi hari ini
         Route::get('/today-menu', [MealController::class, 'getTodayMenu']);
+
+        // Rute untuk melihat riwayat klaim makanan
+        Route::get('/meal/schedule', [MealController::class, 'getSchedule']);
     });
 });
