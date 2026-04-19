@@ -5,26 +5,74 @@ namespace App\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\MealClaim;
+use App\Models\Menu;
 use Illuminate\Support\Facades\Crypt;
 use Carbon\Carbon;
 
 /**
  * Pengaturan Kontroler Distribusi Makanan
- * Mengelola pembuatan kode qr bagi pengguna dan verifikasi pindaian oleh mitra lapangan
  */
 class MealController
 {
     /**
-     * Menghasilkan muatan data qr code terenkripsi untuk sisi pengguna
-     * Memastikan pembuatan kode hanya berlaku satu kali dalam periode hari yang sama
+     * Mengambil RIWAYAT PENGAMBILAN (Misi Utama Kita!)
+     * Menghubungkan data klaim user dengan detail menu untuk ditampilkan di HP
+     */
+    public function getHistory(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            // 1. Ambil data klaim 30 hari terakhir
+            $claims = MealClaim::where('user_id', $user->id)
+                ->with('menu') // Pastikan ada relasi 'menu' di model MealClaim
+                ->orderBy('claim_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // 2. Format data agar ramah untuk UI Mobile React Native
+            $formattedData = $claims->map(function ($claim) {
+                // Konversi tanggal ke format Indonesia (misal: 19 April 2026)
+                $date = Carbon::parse($claim->claim_date);
+                
+                return [
+                    'id' => $claim->id,
+                    'tanggal' => $date->translatedFormat('d F Y'),
+                    'waktu' => Carbon::parse($claim->created_at)->format('H:i') . ' WIB',
+                    'menu' => $claim->menu->nama_menu ?? 'Menu Gizi Sehat',
+                    'kalori' => ($claim->menu->kalori ?? 0) . ' kcal',
+                    'status' => 'Berhasil Diambil',
+                ];
+            });
+
+            // 3. Hitung total porsi bulan ini untuk statistik di kotak biru atas
+            $totalMonth = MealClaim::where('user_id', $user->id)
+                ->whereMonth('claim_date', Carbon::now()->month)
+                ->whereYear('claim_date', Carbon::now()->year)
+                ->count();
+
+            return response()->json([
+                'status' => 'success',
+                'total_bulan_ini' => $totalMonth,
+                'data' => $formattedData
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal menarik data riwayat: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Menghasilkan muatan data qr code terenkripsi
      */
     public function generateQr(Request $request)
     {
-        // Identifikasi pengguna aktif melalui token akses
         $user = $request->user(); 
         $today = Carbon::today()->toDateString(); 
 
-        // Validasi ketersediaan jatah makan berdasarkan tanggal distribusi hari ini
         $alreadyClaimed = MealClaim::where('user_id', $user->id)
                                    ->where('claim_date', $today)
                                    ->exists();
@@ -36,10 +84,6 @@ class MealController
             ], 403);
         }
 
-        /**
-         * Pembuatan muatan data enkripsi tingkat tinggi
-         * Menggabungkan identitas pengguna dan tanggal guna mencegah duplikasi data
-         */
         $rawPayload = $user->id . '|' . $today;
         $encryptedQr = Crypt::encryptString($rawPayload);
 
@@ -51,16 +95,12 @@ class MealController
     }
 
     /**
-     * Menjalankan proses verifikasi data qr code dari sisi mitra
-     * Melakukan validasi integritas data masa berlaku dan status pengambilan jatah
+     * Verifikasi pindaian QR oleh mitra lapangan
      */
     public function verifyQr(Request $request)
     {
         try {
-            // Menerima muatan data qr dari perangkat pindaian mitra
             $encryptedQr = $request->qr_data; 
-            
-            // Dekripsi muatan data rahasia sistem
             $decryptedPayload = Crypt::decryptString($encryptedQr);
             $payloadParts = explode('|', $decryptedPayload);
 
@@ -68,21 +108,13 @@ class MealController
             $qrDate = $payloadParts[1];
             $today = Carbon::today()->toDateString();
 
-            /**
-             * Pemeriksaan masa aktif kode qr
-             * Memastikan data yang dipindai bukan merupakan tangkapan layar dari hari sebelumnya
-             */
             if ($qrDate !== $today) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Masa berlaku kode qr telah berakhir untuk tanggal ' . $qrDate
+                    'message' => 'Masa berlaku kode qr telah berakhir'
                 ], 400);
             }
 
-            /**
-             * Validasi data distribusi dalam basis data
-             * Mencegah upaya klaim berulang oleh pengguna pada hari yang sama
-             */
             $alreadyClaimed = MealClaim::where('user_id', $userId)
                                        ->where('claim_date', $today)
                                        ->exists();
@@ -90,56 +122,37 @@ class MealController
             if ($alreadyClaimed) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Akses ditolak pengguna telah melakukan klaim hari ini'
+                    'message' => 'Akses ditolak, pengguna telah melakukan klaim'
                 ], 403);
             }
 
-            // Pengambilan data profil pengguna untuk proses validasi visual oleh mitra
             $user = User::find($userId);
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Verifikasi berhasil silakan sesuaikan data identitas penerima',
+                'message' => 'Verifikasi berhasil',
                 'data' => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'kategori' => $user->kategori,
-                    'alamat' => $user->alamat,
-                    'tempat_lahir' => $user->tempat_lahir,
-                    'photo_url' => $user->photo ? asset('storage/' . $user->photo) : 'no-photo',
                 ]
             ]);
 
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            // Penanganan terhadap upaya manipulasi atau pemalsuan muatan data qr
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Kode QR tidak dikenali atau terdeteksi hasil manipulasi'
+                'message' => 'Kode QR tidak valid'
             ], 400);
         }
     }
 
     /**
-     * Mengambil informasi menu makanan untuk hari ini beserta nilai gizinya
-     * Ditampilkan secara real-time pada dashboard aplikasi pengguna
+     * Mengambil informasi menu harian
      */
     public function getTodayMenu(Request $request)
     {
         try {
-            // Mengambil menu terbaru yang didaftarkan oleh admin (bisa disesuaikan dengan tanggal nanti)
-            $menu = \App\Models\Menu::latest()->first();
-
-            if (!$menu) {
-                return response()->json([
-                    'status' => 'success',
-                    'data' => [
-                        'kalori' => 0,
-                        'protein' => 0,
-                        'lemak' => 0,
-                        'nama_menu' => 'Menu Belum Ditentukan'
-                    ]
-                ]);
-            }
+            $menu = Menu::latest()->first();
 
             return response()->json([
                 'status' => 'success',
@@ -147,15 +160,11 @@ class MealController
                     'kalori' => $menu->kalori ?? 0,
                     'protein' => $menu->protein ?? 0,
                     'lemak' => $menu->lemak ?? 0,
-                    'nama_menu' => $menu->nama_menu ?? 'Menu Sehat Hari Ini'
+                    'nama_menu' => $menu->nama_menu ?? 'Menu Belum Ditentukan'
                 ]
             ]);
-
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal mengambil data nutrisi dari server'
-            ], 500);
+            return response()->json(['status' => 'error'], 500);
         }
     }
 }

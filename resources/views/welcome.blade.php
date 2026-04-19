@@ -15,7 +15,7 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#3b82f6', // Biru Brand NutriVue
+                        primary: '#3b82f6',
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
