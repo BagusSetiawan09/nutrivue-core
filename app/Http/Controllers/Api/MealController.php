@@ -152,6 +152,90 @@ class MealController
     }
 
     /**
+     * Menghitung Analisis Gizi & Statistik Mingguan Pengguna
+     */
+    public function getStatistics(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $today = Carbon::today();
+            $startOfWeek = Carbon::now()->startOfWeek(); // Senin
+            $endOfWeek = Carbon::now()->endOfWeek(); // Minggu
+
+            // 1. Ambil semua riwayat klaim makanan dalam minggu ini
+            $weeklyClaims = MealClaim::where('user_id', $user->id)
+                ->whereBetween('claim_date', [$startOfWeek->toDateString(), $endOfWeek->toDateString()])
+                ->with('menu')
+                ->get();
+
+            $totalKalori = 0;
+            $totalProtein = 0;
+            $totalLemak = 0;
+            $totalKarbohidrat = 0;
+            $claimCount = $weeklyClaims->count();
+
+            // 2. Siapkan array untuk Grafik Garis (Senin = index 0, Minggu = index 6)
+            $chartData = [0, 0, 0, 0, 0, 0, 0];
+
+            foreach ($weeklyClaims as $claim) {
+                if ($claim->menu) {
+                    $kalori = $claim->menu->kalori ?? 0;
+                    $totalKalori += $kalori;
+                    $totalProtein += $claim->menu->protein ?? 0;
+                    $totalLemak += $claim->menu->lemak ?? 0;
+                    $totalKarbohidrat += $claim->menu->karbohidrat ?? 0;
+
+                    // Tentukan posisi hari (dayOfWeekIso: Senin=1, Minggu=7)
+                    $dayIndex = Carbon::parse($claim->claim_date)->dayOfWeekIso - 1;
+                    $chartData[$dayIndex] += $kalori;
+                }
+            }
+
+            // 3. Hitung Rata-rata Mingguan
+            $avgKalori = $claimCount > 0 ? round($totalKalori / $claimCount) : 0;
+            $avgProtein = $claimCount > 0 ? round($totalProtein / $claimCount, 1) : 0;
+            $avgLemak = $claimCount > 0 ? round($totalLemak / $claimCount, 1) : 0;
+
+            // 4. Hitung Pencapaian Target Hari Ini (Persentase Progress Bar)
+            // Asumsi Target Standar: Protein 60g, Karbohidrat 300g, Lemak 60g
+            $todayClaim = $weeklyClaims->where('claim_date', $today->toDateString())->first();
+            
+            if ($todayClaim && $todayClaim->menu) {
+                $progProtein = min(round((($todayClaim->menu->protein ?? 0) / 60) * 100), 100);
+                $progKarbo = min(round((($todayClaim->menu->karbohidrat ?? 0) / 300) * 100), 100);
+                $progLemak = min(round((($todayClaim->menu->lemak ?? 0) / 60) * 100), 100);
+            } else {
+                // Jika belum makan hari ini, kita gunakan rata-rata mingguan agar UI tetap terisi
+                $avgKarbo = $claimCount > 0 ? ($totalKarbohidrat / $claimCount) : 0;
+                $progProtein = min(round(($avgProtein / 60) * 100), 100);
+                $progKarbo = min(round(($avgKarbo / 300) * 100), 100);
+                $progLemak = min(round(($avgLemak / 60) * 100), 100);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'avg_kalori' => $avgKalori,
+                    'avg_protein' => $avgProtein,
+                    'avg_lemak' => $avgLemak,
+                    'chart_mingguan' => $chartData,
+                    'progress' => [
+                        'protein' => $progProtein,
+                        'karbohidrat' => $progKarbo,
+                        'lemak' => $progLemak
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal menghitung statistik: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Menghasilkan muatan data qr code terenkripsi
      */
     public function generateQr(Request $request)

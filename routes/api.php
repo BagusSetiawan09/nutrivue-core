@@ -51,5 +51,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Rute untuk melihat riwayat klaim makanan
         Route::get('/meal/schedule', [MealController::class, 'getSchedule']);
+
+        // Rute untuk mendapatkan statistik distribusi makanan
+        Route::get('/meal/statistics', [MealController::class, 'getStatistics']);
     });
 });
