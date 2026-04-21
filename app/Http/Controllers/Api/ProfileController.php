@@ -42,7 +42,7 @@ class ProfileController
                 'tinggi_badan' => 'nullable|numeric',
                 'golongan_darah' => 'nullable|string|max:3',
                 'catatan_medis' => 'nullable|string',
-                'alergi' => 'nullable|string', // JSON string dari HP
+                'alergi' => 'nullable|array',
             ]);
 
             // 2. Simpan ke database (Pastikan kolom-kolom ini ada di tabel users Anda)

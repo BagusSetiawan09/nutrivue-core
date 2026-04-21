@@ -35,7 +35,7 @@ class User extends Authenticatable implements FilamentUser
         'tinggi_badan',
         'golongan_darah',
         'catatan_medis',
-        'alergi',
+        'alergi' => 'array',
     ];
 
     /**
