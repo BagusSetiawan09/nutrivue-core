@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-class ProfileController extends Controller
+class ProfileController
 {
     /**
      * Menarik data kesehatan saat halaman dibuka di HP
