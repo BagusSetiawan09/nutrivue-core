@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 // Inisialisasi pengontrol
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MealController;
+use App\Http\Controllers\Api\ProfileController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -38,4 +39,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Sebagai /api/meal/statistics
         Route::get('/statistics', [MealController::class, 'getStatistics']);
     });
+
+    // ⚡ RUTE BARU UNTUK DATA KESEHATAN
+    Route::get('/profile/health', [ProfileController::class, 'getHealth']);
+    Route::post('/profile/health', [ProfileController::class, 'updateHealth']);
 });
