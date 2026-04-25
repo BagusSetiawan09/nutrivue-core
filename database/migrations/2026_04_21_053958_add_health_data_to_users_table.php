@@ -12,7 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // ⚡ Menyuntikkan 5 kolom kesehatan tanpa merusak data lama
             $table->decimal('berat_badan', 5, 2)->nullable()->after('phone');
             $table->decimal('tinggi_badan', 5, 2)->nullable()->after('berat_badan');
             $table->string('golongan_darah', 5)->nullable()->after('tinggi_badan');

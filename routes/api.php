@@ -40,7 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/statistics', [MealController::class, 'getStatistics']);
     });
 
-    // ⚡ RUTE BARU UNTUK DATA KESEHATAN
+    // RUTE UNTUK DATA KESEHATAN
     Route::get('/profile/health', [ProfileController::class, 'getHealth']);
     Route::post('/profile/health', [ProfileController::class, 'updateHealth']);
+    Route::post('/update-privacy', [ProfileController::class, 'updatePrivacy']);
 });

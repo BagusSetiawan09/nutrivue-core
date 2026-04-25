@@ -76,4 +76,36 @@ class ProfileController
             ], 500);
         }
     }
+
+    /**
+     * Menyimpan pengaturan privasi dan keamanan dari aplikasi
+     */
+    public function updatePrivacy(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            $request->validate([
+                'visibilitas_medis' => 'required|boolean',
+                'pelacakan_lokasi' => 'required|boolean',
+            ]);
+
+            $user->visibilitas_medis = $request->visibilitas_medis;
+            $user->pelacakan_lokasi = $request->pelacakan_lokasi;
+            $user->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Pengaturan privasi berhasil disinkronisasi',
+                'data' => $user
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Gagal update privasi: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan server saat menyimpan pengaturan'
+            ], 500);
+        }
+    }
 }
