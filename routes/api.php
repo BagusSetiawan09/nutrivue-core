@@ -44,4 +44,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile/health', [ProfileController::class, 'getHealth']);
     Route::post('/profile/health', [ProfileController::class, 'updateHealth']);
     Route::post('/update-privacy', [ProfileController::class, 'updatePrivacy']);
+    Route::post('/change-password', [ProfileController::class, 'changePassword']);
 });

@@ -108,4 +108,41 @@ class ProfileController
             ], 500);
         }
     }
+
+    /**
+     * Memperbarui kata sandi pengguna
+     */
+    public function changePassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'current_password' => 'required',
+                'new_password' => 'required|min:8'
+            ]);
+
+            $user = $request->user();
+
+            if (!\Illuminate\Support\Facades\Hash::check($request->current_password, $user->password)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Kata sandi saat ini tidak sesuai'
+                ], 400);
+            }
+
+            $user->password = \Illuminate\Support\Facades\Hash::make($request->new_password);
+            $user->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Kata sandi berhasil diperbarui'
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal memperbarui sandi');
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan peladen'
+            ], 500);
+        }
+    }
 }
