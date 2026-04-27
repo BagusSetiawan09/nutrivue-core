@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MealController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\NotificationController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -46,4 +47,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/update-privacy', [ProfileController::class, 'updatePrivacy']);
     Route::post('/change-password', [ProfileController::class, 'changePassword']);
     Route::post('/profile/verify-institution', [ProfileController::class, 'verifyInstitution']);
+
+    // Rute Notifikasi
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/read', [NotificationController::class, 'markAllAsRead']);
 });
