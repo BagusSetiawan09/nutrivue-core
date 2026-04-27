@@ -35,19 +35,25 @@ class AuthController
             ], 422);
         }
 
-        // Proses validasi kode rahasia instansi untuk keamanan data
+        // Pengecekan dinamis ke tabel instansis di basis data
         $namaInstansi = null;
         if (strtolower($request->kategori) === 'siswa') {
-            if ($request->kode_instansi === 'SMKPAB26') {
-                $namaInstansi = 'SMKS PAB 2 Helvetia';
-            } elseif ($request->kode_instansi === 'NUTRIVUE1') {
-                $namaInstansi = 'Sekolah Unggulan NutriVue';
-            } else {
+            if (empty($request->kode_instansi)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Kode instansi wajib diisi untuk pendaftaran siswa'
+                ], 400);
+            }
+
+            $instansi = \App\Models\Instansi::where('kode_rahasia', $request->kode_instansi)->first();
+
+            if (!$instansi) {
                 return response()->json([
                     'status'  => 'error',
                     'message' => 'Kode identifikasi instansi tidak valid atau tidak terdaftar'
                 ], 400);
             }
+            $namaInstansi = $instansi->nama_instansi;
         }
 
         try {

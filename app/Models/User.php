@@ -26,6 +26,7 @@ class User extends Authenticatable implements FilamentUser
         'email',
         'password',
         'role',
+        'instansi',
         'kategori',
         'tempat_lahir',
         'tanggal_lahir',
@@ -35,7 +36,7 @@ class User extends Authenticatable implements FilamentUser
         'tinggi_badan',
         'golongan_darah',
         'catatan_medis',
-        'alergi' => 'array',
+        'alergi', // Perbaikan: Cukup sebutkan nama kolomnya saja
     ];
 
     /**
@@ -58,6 +59,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'alergi' => 'array', // Perbaikan: Pemetaan tipe data diletakkan di sini
         ];
     }
 
@@ -71,7 +73,6 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // 🛡️ JURUS IZIN MASUK DASHBOARD:
         // Hanya role yang kita tentukan yang boleh masuk ke Admin Panel.
         // Masyarakat TIDAK BOLEH masuk (Forbidden).
         
