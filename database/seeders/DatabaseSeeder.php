@@ -67,6 +67,7 @@ class DatabaseSeeder extends Seeder
             UserRoleSeeder::class,
             MenuSeeder::class,
             ReviewSeeder::class,
+            FaqSeeder::class,
         ]);
     }
 }
