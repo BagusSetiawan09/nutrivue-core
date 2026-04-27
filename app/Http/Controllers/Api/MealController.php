@@ -69,19 +69,29 @@ class MealController
      * Mengambil Jadwal Menu 3 Hari ke Depan Berdasarkan Target Penerima
      * Diformat khusus untuk PieChart di React Native MenuScreen
      */
+    /**
+     * Mengambil Jadwal Menu 3 Hari ke Depan Berdasarkan Target Penerima
+     * Diformat khusus untuk PieChart di React Native MenuScreen
+     */
     public function getSchedule(Request $request)
     {
         try {
             $user = $request->user();
 
-            // 1. Pemetaan cerdas kategori user ke target_penerima di tabel Menu
-            $targetPenerima = 'Siswa'; // Default
-            if (in_array(strtolower($user->kategori), ['ibu_hamil', 'ibu hamil'])) {
+            // 1. Pemetaan cerdas kategori pengguna ke target_penerima
+            // Mengambil kategori asli dari database, jika kosong setel ke 'Umum'
+            $kategoriAsli = strtolower($user->kategori ?? 'umum');
+            $targetPenerima = 'Umum'; 
+
+            if (in_array($kategoriAsli, ['ibu_hamil', 'ibu hamil'])) {
                 $targetPenerima = 'Ibu Hamil';
-            } elseif (in_array(strtolower($user->kategori), ['ibu_balita', 'balita'])) {
+            } elseif (in_array($kategoriAsli, ['ibu_balita', 'balita'])) {
                 $targetPenerima = 'Balita';
-            } elseif (strtolower($user->kategori) === 'siswa') {
+            } elseif ($kategoriAsli === 'siswa') {
                 $targetPenerima = 'Siswa';
+            } else {
+                // Mengakomodasi masyarakat atau instansi lain dengan menggunakan huruf kapital di awal kata
+                $targetPenerima = ucwords($kategoriAsli);
             }
 
             // 2. Siapkan 3 Tanggal Utama
@@ -90,8 +100,13 @@ class MealController
             $lusa = Carbon::today()->addDays(2)->toDateString();
 
             // 3. Tarik data menu dari database berdasarkan tanggal & target
+            // Kita tambahkan pencarian ganda agar menu berskala 'Umum' atau 'Semua' tetap masuk
             $menus = Menu::whereIn('tanggal_distribusi', [$today, $tomorrow, $lusa])
-                        ->where('target_penerima', $targetPenerima)
+                        ->where(function($query) use ($targetPenerima) {
+                            $query->where('target_penerima', $targetPenerima)
+                                  ->orWhere('target_penerima', 'Umum')
+                                  ->orWhere('target_penerima', 'Semua');
+                        })
                         ->get()
                         ->keyBy('tanggal_distribusi');
 
@@ -101,7 +116,6 @@ class MealController
                 
                 return [
                     'title' => $menu->nama_menu,
-                    // Jika ada foto, jadikan link URL penuh. Jika tidak, pakai gambar default.
                     'image' => $menu->foto_makanan ? asset('storage/' . $menu->foto_makanan) : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop',
                     'description' => $menu->deskripsi ?? 'Deskripsi menu belum dilengkapi.',
                     'calories' => $menu->kalori ?? 0,
@@ -109,19 +123,19 @@ class MealController
                         [
                             'name' => 'Protein',
                             'population' => (int) ($menu->protein ?? 0),
-                            'color' => '#6366F1', // Indigo untuk Protein
+                            'color' => '#6366F1', 
                             'description' => 'Sangat penting untuk perbaikan sel dan pertumbuhan.'
                         ],
                         [
                             'name' => 'Lemak',
                             'population' => (int) ($menu->lemak ?? 0),
-                            'color' => '#F43F5E', // Rose untuk Lemak
+                            'color' => '#F43F5E', 
                             'description' => 'Sumber energi cadangan dan membantu penyerapan vitamin.'
                         ],
                         [
                             'name' => 'Karbohidrat',
                             'population' => (int) ($menu->karbohidrat ?? 0),
-                            'color' => '#14B8A6', // Teal untuk Karbohidrat
+                            'color' => '#14B8A6', 
                             'description' => 'Sumber energi utama untuk otak dan aktivitas harian.'
                         ]
                     ]
@@ -135,7 +149,7 @@ class MealController
                 'Lusa'     => $formatMenu($menus->get($lusa)),
             ];
 
-            // Bersihkan hari yang tidak ada jadwalnya (null) agar frontend merespon dengan rapi
+            // Bersihkan hari yang tidak ada jadwalnya agar frontend merespon dengan rapi
             $data = array_filter($data);
 
             return response()->json([
