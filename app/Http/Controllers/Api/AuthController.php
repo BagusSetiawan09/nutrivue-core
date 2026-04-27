@@ -35,7 +35,7 @@ class AuthController
             ], 422);
         }
 
-        // Pengecekan dinamis ke tabel instansis di basis data
+        // Pengecekan dinamis ke tabel titik_penyalurans
         $namaInstansi = null;
         if (strtolower($request->kategori) === 'siswa') {
             if (empty($request->kode_instansi)) {
@@ -45,15 +45,17 @@ class AuthController
                 ], 400);
             }
 
-            $instansi = \App\Models\Instansi::where('kode_rahasia', $request->kode_instansi)->first();
+            // Mencari kecocokan kode di tabel Titik Penyaluran
+            $instansi = \App\Models\TitikPenyaluran::where('kode_rahasia', $request->kode_instansi)->first();
 
             if (!$instansi) {
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'Kode identifikasi instansi tidak valid atau tidak terdaftar'
+                    'message' => 'Kode identifikasi sekolah tidak valid atau tidak terdaftar'
                 ], 400);
             }
-            $namaInstansi = $instansi->nama_instansi;
+            // Jika valid, ambil nama sekolahnya
+            $namaInstansi = $instansi->nama_lokasi;
         }
 
         try {

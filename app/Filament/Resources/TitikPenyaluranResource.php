@@ -47,7 +47,7 @@ class TitikPenyaluranResource extends Resource
                     Forms\Components\TextInput::make('nama_lokasi')
                         ->label('Nama Lokasi')
                         ->required()
-                        ->placeholder('Contoh SDN 101877 Helvetia'),
+                        ->placeholder('Masukkan Nama Sekolah'),
                     
                     Forms\Components\Select::make('jenis_lokasi')
                         ->label('Kategori Lokasi')
@@ -56,6 +56,13 @@ class TitikPenyaluranResource extends Resource
                             'Posyandu' => 'Posyandu',
                             'Puskesmas' => 'Puskesmas',
                         ])->required(),
+
+                    // PENAMBAHAN KOTAK ISIAN KODE RAHASIA
+                    Forms\Components\TextInput::make('kode_rahasia')
+                        ->label('Kode Rahasia Pendaftaran')
+                        ->helperText('Wajib diisi untuk pendaftaran Siswa di aplikasi seluler')
+                        ->unique(ignoreRecord: true)
+                        ->maxLength(255),
                     
                     Forms\Components\TextInput::make('penanggung_jawab')
                         ->label('Nama Kepala Pimpinan')
