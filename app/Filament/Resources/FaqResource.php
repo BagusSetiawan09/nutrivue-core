@@ -9,6 +9,10 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\Section as InfolistSection;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\IconEntry;
 
 class FaqResource extends Resource
 {
@@ -18,7 +22,6 @@ class FaqResource extends Resource
     
     protected static ?string $navigationLabel = 'Manajemen FAQ';
     
-    // ⚡ INI KUNCI OPSI A: Memasukkan menu ke grup Pengaturan Sistem
     protected static ?string $navigationGroup = 'Pengaturan Sistem';
 
     public static function form(Form $form): Form
@@ -65,8 +68,46 @@ class FaqResource extends Resource
                     ->sortable(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()->label('Ubah'),
-                Tables\Actions\DeleteAction::make()->label('Hapus'),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\ViewAction::make()->label('Lihat Detail')->color('gray'),
+                    Tables\Actions\EditAction::make()->label('Ubah'),
+                    Tables\Actions\DeleteAction::make()->label('Hapus'),
+                ])
+                ->label('Aksi')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->button()
+                ->color('gray'),
+            ]);
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                InfolistSection::make('Informasi Panduan Bantuan')
+                    ->description('Detail lengkap dari panduan yang akan ditampilkan di aplikasi.')
+                    ->schema([
+                        TextEntry::make('question')
+                            ->label('Pertanyaan')
+                            ->weight('bold')
+                            ->size(TextEntry\TextEntrySize::Large)
+                            ->columnSpanFull(),
+                            
+                        TextEntry::make('answer')
+                            ->label('Jawaban Lengkap')
+                            ->prose() // Memberikan format tipografi yang nyaman dibaca untuk teks panjang
+                            ->columnSpanFull(),
+                            
+                        IconEntry::make('is_active')
+                            ->label('Status Penayangan')
+                            ->boolean(),
+                            
+                        TextEntry::make('updated_at')
+                            ->label('Terakhir Diperbarui')
+                            ->dateTime()
+                            ->badge()
+                            ->color('info'),
+                    ])->columns(2)
             ]);
     }
 
