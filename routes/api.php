@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MealController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\FaqController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -47,6 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/update-privacy', [ProfileController::class, 'updatePrivacy']);
     Route::post('/change-password', [ProfileController::class, 'changePassword']);
     Route::post('/profile/verify-institution', [ProfileController::class, 'verifyInstitution']);
+    Route::get('/faqs', [FaqController::class, 'index']);
 
     // Rute Notifikasi
     Route::get('/notifications', [NotificationController::class, 'index']);
