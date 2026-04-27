@@ -7,59 +7,62 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
-/**
- * Pengaturan Autentikasi API
- * Mengelola pendaftaran masuk dan keluar akun melalui protokol Sanctum
- */
 class AuthController
 {
-    /**
-     * Menangani pendaftaran pengguna baru ke dalam sistem
-     */
     public function register(Request $request)
     {
-        // 1. PENJAGA GERBANG (VALIDASI)
-        // Mencegah error SQL bocor ke frontend
         $validator = Validator::make($request->all(), [
             'name'          => 'required|string|max:255',
-            'email'         => 'required|string|email|max:255|unique:users,email', // KUNCI UTAMA: Cek duplikat email
+            'email'         => 'required|string|email|max:255|unique:users,email',
             'password'      => 'required|string|min:8',
             'kategori'      => 'required|string',
             'tempat_lahir'  => 'required|string',
             'tanggal_lahir' => 'required|string',
             'alamat'        => 'required|string',
             'phone'         => 'required|string',
+            'kode_instansi' => 'nullable|string',
         ], [
-            // Pesan error custom dalam Bahasa Indonesia
-            'email.unique'   => 'Email ini sudah terdaftar. Silakan gunakan email lain atau coba masuk (Login).',
-            'email.required' => 'Alamat email wajib diisi.',
-            'email.email'    => 'Format email tidak valid.',
-            'password.min'   => 'Kata sandi minimal 8 karakter.',
+            'email.unique'   => 'Email ini sudah terdaftar silakan gunakan email lain',
+            'email.required' => 'Alamat email wajib diisi',
+            'password.min'   => 'Kata sandi minimal delapan karakter',
         ]);
 
-        // 2. JIKA VALIDASI GAGAL (Contoh: Email sudah ada)
         if ($validator->fails()) {
             return response()->json([
                 'status'  => 'error',
-                'message' => $validator->errors()->first(), // Mengambil pesan error pertama (misal: "Email ini sudah terdaftar...")
+                'message' => $validator->errors()->first(),
                 'errors'  => $validator->errors()
-            ], 422); // Gunakan kode 422 Unprocessable Entity
+            ], 422);
+        }
+
+        // Proses validasi kode rahasia instansi untuk keamanan data
+        $namaInstansi = null;
+        if (strtolower($request->kategori) === 'siswa') {
+            if ($request->kode_instansi === 'SMKPAB26') {
+                $namaInstansi = 'SMKS PAB 2 Helvetia';
+            } elseif ($request->kode_instansi === 'NUTRIVUE1') {
+                $namaInstansi = 'Sekolah Unggulan NutriVue';
+            } else {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Kode identifikasi instansi tidak valid atau tidak terdaftar'
+                ], 400);
+            }
         }
 
         try {
-            // 3. JIKA LOLOS VALIDASI, SIMPAN KE DATABASE
             $user = User::create([
                 'name'          => $request->name,
                 'email'         => $request->email,
                 'password'      => Hash::make($request->password), 
                 'kategori'      => $request->kategori,
+                'instansi'      => $namaInstansi,
                 'tempat_lahir'  => $request->tempat_lahir,
                 'tanggal_lahir' => $request->tanggal_lahir,
                 'alamat'        => $request->alamat,
                 'phone'         => $request->phone,
             ]);
 
-            // Mengirim respon sukses
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Pendaftaran akun berhasil dilakukan',
@@ -67,17 +70,13 @@ class AuthController
             ], 201);
 
         } catch (\Exception $error) {
-            // Menangani kegagalan sistem (Database down, dll)
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Gagal melakukan pendaftaran. Kesalahan server.'
+                'message' => 'Gagal melakukan pendaftaran akibat kesalahan server internal'
             ], 500);
         }
     }
 
-    /**
-     * Menangani proses masuk pengguna ke dalam sistem
-     */
     public function login(Request $request)
     {
         try {
@@ -102,14 +101,11 @@ class AuthController
         } catch (\Exception $error) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Terjadi kesalahan sistem internal.'
+                'message' => 'Terjadi kesalahan sistem internal'
             ], 500);
         }
     }
 
-    /**
-     * Menangani proses keluar pengguna dari sistem
-     */
     public function logout(Request $request)
     {
         try {
@@ -123,30 +119,25 @@ class AuthController
         } catch (\Exception $error) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Gagal mengakhiri sesi akses.'
+                'message' => 'Gagal mengakhiri sesi akses'
             ], 500);
         }
     }
 
-    /**
-     * Menangani pembaruan data profil pengguna
-     */
     public function updateProfile(Request $request)
     {
-        $user = $request->user(); // Mengambil data user yang sedang login
+        $user = $request->user(); 
 
-        // 1. VALIDASI DATA
         $validator = Validator::make($request->all(), [
             'name'         => 'required|string|max:255',
-            // KUNCI PENTING: Cek duplikat email, KECUALI email milik user ini sendiri
             'email'        => 'required|string|email|max:255|unique:users,email,' . $user->id, 
             'phone'        => 'nullable|string',
             'alamat'       => 'nullable|string',
             'tempat_lahir' => 'nullable|string',
         ], [
-            'email.unique'   => 'Email ini sudah terdaftar oleh pengguna lain.',
-            'email.required' => 'Alamat email wajib diisi.',
-            'name.required'  => 'Nama lengkap wajib diisi.',
+            'email.unique'   => 'Email ini sudah terdaftar oleh pengguna lain',
+            'email.required' => 'Alamat email wajib diisi',
+            'name.required'  => 'Nama lengkap wajib diisi',
         ]);
 
         if ($validator->fails()) {
@@ -158,7 +149,6 @@ class AuthController
         }
 
         try {
-            // 2. PROSES PEMBARUAN KE DATABASE
             $user->update([
                 'name'         => $request->name,
                 'email'        => $request->email,
@@ -170,13 +160,13 @@ class AuthController
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Profil berhasil diperbarui',
-                'data'    => $user // Mengembalikan data terbaru untuk disimpan di AsyncStorage
+                'data'    => $user 
             ], 200);
 
         } catch (\Exception $error) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Gagal memperbarui profil. Kesalahan server.'
+                'message' => 'Gagal memperbarui profil kesalahan server'
             ], 500);
         }
     }
