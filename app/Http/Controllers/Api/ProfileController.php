@@ -145,4 +145,44 @@ class ProfileController
             ], 500);
         }
     }
+
+    /**
+     * Verifikasi kode instansi secara mandiri oleh pengguna
+     */
+    public function verifyInstitution(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            $request->validate([
+                'kode_rahasia' => 'required|string',
+            ]);
+
+            // Mencari instansi berdasarkan kode rahasia yang dimasukkan
+            $instansi = \App\Models\TitikPenyaluran::where('kode_rahasia', $request->kode_rahasia)->first();
+
+            if (!$instansi) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Kode rahasia tidak ditemukan atau tidak valid'
+                ], 404);
+            }
+
+            // Update data instansi pada user
+            $user->instansi = $instansi->nama_lokasi;
+            $user->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Akun berhasil diverifikasi ke ' . $instansi->nama_lokasi,
+                'data' => $user
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal melakukan verifikasi: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
