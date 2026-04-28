@@ -29,6 +29,7 @@ class TitikPenyaluranResource extends Resource
     // Label navigasi yang tampil pada menu sidebar
     protected static ?string $navigationLabel = 'Titik Penyaluran';
 
+    // Mengatur posisi menu di sidebar berdasarkan Role
     public static function getNavigationGroup(): ?string
     {
         return auth()->user()->role === 'pemerintah' 
@@ -57,7 +58,6 @@ class TitikPenyaluranResource extends Resource
                             'Puskesmas' => 'Puskesmas',
                         ])->required(),
 
-                    // PENAMBAHAN KOTAK ISIAN KODE RAHASIA
                     Forms\Components\TextInput::make('kode_rahasia')
                         ->label('Kode Rahasia Pendaftaran')
                         ->helperText('Wajib diisi untuk pendaftaran Siswa di aplikasi seluler')
@@ -198,19 +198,16 @@ class TitikPenyaluranResource extends Resource
         ];
     }
 
-
-    public static function canCreate(): bool
+    // FILTER ISOLASI DATA TITIK PENYALURAN
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        return auth()->user()->role !== 'pemerintah';
-    }
-
-    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
-    {
-        return auth()->user()->role !== 'pemerintah';
-    }
-
-    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
-    {
-        return auth()->user()->role !== 'pemerintah';
+        $query = parent::getEloquentQuery();
+        
+        // Jika yang login bukan Super Admin, tampilkan HANYA lokasi buatan dia sendiri
+        if (auth()->user()->role !== 'super_admin') {
+            $query->where('created_by', auth()->id());
+        }
+        
+        return $query;
     }
 }

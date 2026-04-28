@@ -44,18 +44,6 @@ class UserResource extends Resource
     protected static ?string $navigationGroup = 'Pengaturan Sistem';
 
     /**
-     * 🛡️ KUNCI PINTU UTAMA: 
-     * Membatasi hak akses resource HANYA untuk peran super_admin.
-     * Menu ini otomatis HILANG untuk Pemerintah dan Petugas!
-     */
-    public static function canViewAny(): bool
-    {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        return $user->role === 'super_admin';
-    }
-
-    /**
      * Definisi skema formulir pengelolaan akun pengguna
      */
     public static function form(Form $form): Form
@@ -84,16 +72,25 @@ class UserResource extends Resource
                         ->label('Kata Sandi')
                         ->placeholder('Kosongkan jika tidak ada perubahan'),
                         
+                    //  PEMBATASAN DROPDOWN ROLE BERDASARKAN HAK AKSES
                     Select::make('role')
-                        ->options([
+                        ->options(fn () => auth()->user()->role === 'super_admin' ? [
                             'super_admin' => 'Super Admin Dinas',
+                            'it_mbg' => 'IT MBG / Operasional',
                             'petugas' => 'Petugas Lapangan',
                             'pemerintah' => 'Pemerintah Eksekutif',
+                            'masyarakat' => 'Masyarakat Umum',
+                        ] : [
+                            'petugas' => 'Petugas Lapangan',
                             'masyarakat' => 'Masyarakat Umum',
                         ])
                         ->required()
                         ->default('masyarakat')
                         ->label('Hak Akses Role'),
+
+                    //  PENYUSUP OTOMATIS: Mencatat siapa yang membuat akun ini
+                    Forms\Components\Hidden::make('created_by')
+                        ->default(fn () => auth()->id()),
                 ])->columns(2)
             ]);
     }
@@ -126,6 +123,7 @@ class UserResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'super_admin' => 'danger',
+                        'it_mbg' => 'primary', 
                         'petugas' => 'warning',
                         'pemerintah' => 'info',
                         'masyarakat' => 'success',
@@ -133,6 +131,7 @@ class UserResource extends Resource
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'super_admin' => 'Super Admin',
+                        'it_mbg' => 'IT MBG', 
                         'petugas' => 'Petugas Lapangan',
                         'pemerintah' => 'Pemerintah Eksekutif',
                         'masyarakat' => 'Masyarakat',
@@ -145,7 +144,15 @@ class UserResource extends Resource
                     ->sortable(),
             ])
             ->filters([
-                // Filter dapat ditambahkan sesuai kebutuhan manajemen
+                Tables\Filters\SelectFilter::make('role')
+                    ->label('Saring Hak Akses')
+                    ->options([
+                        'super_admin' => 'Super Admin',
+                        'pemerintah' => 'Pemerintah Eksekutif',
+                        'it_mbg' => 'IT MBG',
+                        'petugas' => 'Petugas Lapangan',
+                        'masyarakat' => 'Masyarakat Umum',
+                    ]),
             ])
             ->actions([
                 ActionGroup::make([
@@ -201,6 +208,7 @@ class UserResource extends Resource
                                 ->badge()
                                 ->color(fn (string $state): string => match ($state) {
                                     'super_admin' => 'danger',
+                                    'it_mbg' => 'fuchsia',
                                     'petugas' => 'warning',
                                     'pemerintah' => 'info',
                                     'masyarakat' => 'success',
@@ -208,6 +216,7 @@ class UserResource extends Resource
                                 })
                                 ->formatStateUsing(fn (string $state): string => match ($state) {
                                     'super_admin' => 'Super Admin',
+                                    'it_mbg' => 'IT MBG',
                                     'petugas' => 'Petugas Lapangan',
                                     'pemerintah' => 'Pemerintah Eksekutif',
                                     'masyarakat' => 'Masyarakat',
@@ -235,5 +244,24 @@ class UserResource extends Resource
             'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
+    }
+
+    // FILTER TABEL OTOMATIS & URUTAN HIRARKI PANGKAT
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        
+        // Isolasi Data (Multi-Tenancy)
+        if (auth()->user()->role !== 'super_admin') {
+            $query->where('created_by', auth()->id());
+        }
+        
+        // URUTAN KASTA/PANGKAT SPESIFIK MENGGUNAKAN SQL RAW
+        $query->orderByRaw("FIELD(role, 'super_admin', 'pemerintah', 'it_mbg', 'petugas', 'masyarakat') ASC");
+        
+        // Urutan kedua: yang paling baru daftar di setiap pangkat ada di atas
+        $query->latest();
+        
+        return $query;
     }
 }

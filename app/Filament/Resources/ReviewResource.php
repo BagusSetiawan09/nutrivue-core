@@ -37,55 +37,7 @@ class ReviewResource extends Resource
     // Label navigasi yang tampil pada menu sidebar
     protected static ?string $navigationLabel = 'Ulasan Publik';
 
-    /**
-     * Membatasi visibilitas menu hanya untuk super admin dan petugas
-     */
-    public static function canViewAny(): bool
-    {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        return in_array($user->role, ['super_admin', 'petugas']);
-    }
-
-    /**
-     * Membatasi pembuatan ulasan manual hanya untuk peran super admin
-     */
-    public static function canCreate(): bool
-    {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        return $user->role === 'super_admin';
-    }
-
-    /**
-     * Memberikan hak moderasi ulasan kepada super admin dan petugas
-     */
-    public static function canEdit($record): bool
-    {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        return in_array($user->role, ['super_admin', 'petugas']);
-    }
-
-    /**
-     * Membatasi hak penghapusan ulasan secara massal hanya untuk super admin
-     */
-    public static function canDeleteAny(): bool
-    {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        return $user->role === 'super_admin';
-    }
-
-    /**
-     * Membatasi hak penghapusan ulasan satuan hanya untuk super admin
-     */
-    public static function canDelete($record): bool
-    {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        return $user->role === 'super_admin';
-    }
+    // ❌ FUNGSI canViewAny, canCreate, canEdit, canDeleteAny, dan canDelete TELAH DIHAPUS
 
     /**
      * Definisi skema formulir moderasi ulasan

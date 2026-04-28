@@ -13,6 +13,10 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\Section as InfoSection;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\IconEntry;
 use Illuminate\Support\Str;
 
 /**
@@ -32,16 +36,6 @@ class ClientAppResource extends Resource
 
     // Pengelompokan menu dalam navigasi sistem
     protected static ?string $navigationGroup = 'Pengaturan Sistem';
-
-    /**
-     * Membatasi akses resource hanya untuk peran super admin
-     */
-    public static function canViewAny(): bool
-    {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        return $user->role === 'super_admin';
-    }
 
     /**
      * Definisi skema formulir pembuatan dan pembaruan data
@@ -107,7 +101,8 @@ class ClientAppResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\ViewAction::make()->label('Lihat Detail'), //  TAMBAHAN VIEW ACTION
+                    Tables\Actions\EditAction::make()->label('Ubah Data'),
                     
                     // Aksi untuk pembuatan token API baru
                     Tables\Actions\Action::make('generate_token')
@@ -162,6 +157,38 @@ class ClientAppResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
+            ]);
+    }
+
+    /**
+     *  TAMBAHAN INFOLIST: Tampilan detail aplikasi klien yang elegan
+     */
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                InfoSection::make('Detail Klien API')
+                    ->schema([
+                        TextEntry::make('name')
+                            ->label('Nama Aplikasi Identitas')
+                            ->weight('bold')
+                            ->size(TextEntry\TextEntrySize::Large),
+                            
+                        IconEntry::make('is_active')
+                            ->label('Status Operasional')
+                            ->boolean(),
+                            
+                        TextEntry::make('description')
+                            ->label('Deskripsi Penggunaan')
+                            ->columnSpanFull()
+                            ->prose(),
+                            
+                        TextEntry::make('created_at')
+                            ->label('Tanggal Registrasi')
+                            ->dateTime()
+                            ->badge()
+                            ->color('gray'),
+                    ])->columns(2)
             ]);
     }
 

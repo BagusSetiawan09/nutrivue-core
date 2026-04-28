@@ -22,6 +22,7 @@ class Menu extends Model
         'karbohidrat',
         'lemak',
         'status',
+        'created_by',
     ];
 
     public function titik_penyaluran()

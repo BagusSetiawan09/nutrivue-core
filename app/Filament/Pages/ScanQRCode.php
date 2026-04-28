@@ -44,13 +44,13 @@ class ScanQRCode extends Page
     public string $scanMessage = 'Sistem Siap Menunggu pindaian';
 
     /**
-     * 🛡️ JURUS BLOKIR HALAMAN SCAN:
-     * Halaman dan menu ini HANYA akan muncul untuk Super Admin dan Petugas.
-     * Pemerintah dan Masyarakat tidak akan bisa melihat apalagi mengaksesnya!
+     * 🛡️ JURUS BLOKIR HALAMAN SCAN (DIPERBARUI):
+     * Halaman dan menu ini HANYA akan muncul untuk Super Admin, IT MBG, dan Petugas.
      */
     public static function canAccess(): bool
     {
-        return in_array(auth()->user()->role, ['super_admin', 'petugas']);
+        // ⚡ TAMBAHAN 'it_mbg' DI SINI
+        return in_array(auth()->user()->role, ['super_admin', 'it_mbg', 'petugas']);
     }
 
     /**

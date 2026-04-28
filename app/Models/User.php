@@ -36,7 +36,8 @@ class User extends Authenticatable implements FilamentUser
         'tinggi_badan',
         'golongan_darah',
         'catatan_medis',
-        'alergi', // Perbaikan: Cukup sebutkan nama kolomnya saja
+        'alergi',
+        'created_by',
     ];
 
     /**
@@ -77,7 +78,8 @@ class User extends Authenticatable implements FilamentUser
         // Masyarakat TIDAK BOLEH masuk (Forbidden).
         
         return in_array($this->role, [
-            'super_admin', 
+            'super_admin',
+            'it_mbg', 
             'petugas', 
             'pemerintah'
         ]);

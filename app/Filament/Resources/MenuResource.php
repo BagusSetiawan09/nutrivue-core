@@ -45,43 +45,6 @@ class MenuResource extends Resource
             : 'Distribusi Makanan';
     }
 
-    public static function canViewAny(): bool
-    {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        return in_array($user->role, ['super_admin', 'petugas', 'pemerintah']);
-    }
-
-    /**
-     * Membatasi hak pembuatan jadwal hanya untuk peran super admin
-     */
-    public static function canCreate(): bool
-    {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        return $user->role === 'super_admin';
-    }
-
-    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
-    {
-        return auth()->user()->role !== 'pemerintah';
-    }
-
-    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
-    {
-        return auth()->user()->role !== 'pemerintah';
-    }
-
-    /**
-     * Membatasi hak penghapusan massal hanya untuk peran super admin
-     */
-    public static function canDeleteAny(): bool
-    {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        return $user->role === 'super_admin';
-    }
-
     /**
      * Definisi skema formulir input data menu
      */
@@ -366,4 +329,16 @@ class MenuResource extends Resource
         ];
     }
 
+    // FILTER ISOLASI DATA MENU DISTRIBUSI
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        
+        // Jika yang login bukan Super Admin, tampilkan HANYA jadwal menu buatan dia sendiri
+        if (auth()->user()->role !== 'super_admin') {
+            $query->where('created_by', auth()->id());
+        }
+        
+        return $query;
+    }
 }
