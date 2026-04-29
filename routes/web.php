@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Models\Pemasok;
 use Illuminate\Http\Request;
+use App\Models\Menu;
+use App\Models\User;
 
 Route::get('/', function () {
     return view('welcome');
@@ -49,4 +51,34 @@ Route::post('/pendaftaran-pemasok', function (Request $request) {
     ]);
 
     return redirect('/')->with('success', 'Pendaftaran Berhasil! Tim kami akan menghubungi Anda.');
+});
+
+Route::get('/bagi-menu-it', function () {
+    try {
+        // Ambil semua ID pasukan IT MBG yang 10 orang tadi
+        $itUsers = User::where('role', 'it_mbg')->pluck('id')->toArray();
+
+        if (empty($itUsers)) {
+            return "Pasukan IT MBG belum ada di radar!";
+        }
+
+        // Ambil semua katalog menu yang ada di database
+        $menus = Menu::all();
+        $count = 0;
+
+        foreach ($menus as $menu) {
+            // Pilih 1 personel IT MBG secara acak untuk setiap menu
+            $randomItId = $itUsers[array_rand($itUsers)];
+            
+            // Serahkan kepemilikan menu ke personel tersebut
+            $menu->created_by = $randomItId;
+            $menu->save(); // Menggunakan save() agar aman dari mass-assignment
+            
+            $count++;
+        }
+
+        return "Berhasil: " . $count . " Katalog Menu sudah resmi didistribusikan ke 10 Pasukan IT MBG.";
+    } catch (\Exception $e) {
+        return "Gagal: " . $e->getMessage();
+    }
 });

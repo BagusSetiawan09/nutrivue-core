@@ -4,85 +4,50 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\TitikPenyaluran;
-use Faker\Factory as Faker;
+use App\Models\User;
 
 class TitikPenyaluranSeeder extends Seeder
 {
     public function run(): void
     {
-        $dataUtama = [
-            [
-                'nama_lokasi' => 'SDN 101877 Helvetia',
-                'jenis_lokasi' => 'Sekolah',
-                'alamat' => 'Jl. Beringin Raya, Helvetia, Kec. Medan Helvetia, Kota Medan, Sumatera Utara',
-                'penanggung_jawab' => 'Siti Aminah, S.Pd',
-                'kontak_person' => '081234567001',
-                'map_url' => 'https://www.google.com/maps/search/?api=1&query=' . urlencode('SDN 101877 Helvetia Medan'),
-            ],
-            [
-                'nama_lokasi' => 'Puskesmas Helvetia',
-                'jenis_lokasi' => 'Puskesmas',
-                'alamat' => 'Jl. Beringin X No.23, Helvetia, Kec. Medan Helvetia, Kota Medan',
-                'penanggung_jawab' => 'dr. Budi Santoso',
-                'kontak_person' => '081234567002',
-                'map_url' => 'https://www.google.com/maps/search/?api=1&query=' . urlencode('Puskesmas Helvetia Medan'),
-            ],
-            [
-                'nama_lokasi' => 'Posyandu Melati Indah',
-                'jenis_lokasi' => 'Posyandu',
-                'alamat' => 'Gg. Pembangunan Raya, Tanjung Gusta, Kec. Medan Helvetia, Kota Medan',
-                'penanggung_jawab' => 'Bidan Ningsih',
-                'kontak_person' => '081234567003',
-                'map_url' => 'https://www.google.com/maps/search/?api=1&query=' . urlencode('Posyandu Tanjung Gusta Medan'),
-            ],
-            [
-                'nama_lokasi' => 'SMKS PAB 2 Helvetia', 
-                'jenis_lokasi' => 'Sekolah',
-                'alamat' => 'Jl. Veteran, Helvetia, Kec. Labuhan Deli, Kabupaten Deli Serdang',
-                'penanggung_jawab' => 'Kepala Sekolah SMKS PAB 2',
-                'kontak_person' => '081234567004',
-                'map_url' => 'https://www.google.com/maps/search/?api=1&query=' . urlencode('SMKS PAB 2 Helvetia Deli Serdang'),
-            ],
-            [
-                'nama_lokasi' => 'SMK Swasta Tritech Indonesia', 
-                'jenis_lokasi' => 'Sekolah',
-                'alamat' => 'Jl. Bhayangkara No.484, Indra Kasih, Kec. Medan Tembung, Kota Medan',
-                'penanggung_jawab' => 'Kepala Sekolah SMK Tritech',
-                'kontak_person' => '081234567008',
-                'map_url' => 'https://www.google.com/maps/search/?api=1&query=' . urlencode('SMK Tritech Indonesia Medan'),
-            ],
-        ];
+        // Tarik semua akun IT MBG dari database
+        $itUsers = User::where('role', 'it_mbg')->get();
 
-        foreach ($dataUtama as $lokasi) {
-            TitikPenyaluran::firstOrCreate(['nama_lokasi' => $lokasi['nama_lokasi']], $lokasi);
+        if ($itUsers->isEmpty()) {
+            $this->command->info('Tidak ada akun IT MBG ditemukan. Pastikan Anda menjalankan ItMbgSeeder terlebih dahulu untuk membuat 10 akun IT MBG.');
+            return;
         }
 
-        // Generate 45 data dummy dengan link Maps pencarian yang berfungsi
-        $faker = Faker::create('id_ID');
-        $jenisLokasi = ['Sekolah', 'Posyandu', 'Puskesmas'];
+        // Hapus data titik penyaluran lama agar bersih dan tidak tumpang tindih
+        TitikPenyaluran::query()->delete();
 
-        for ($i = 1; $i <= 45; $i++) {
-            $jenis = $faker->randomElement($jenisLokasi);
-            
-            if ($jenis === 'Sekolah') {
-                $nama = $faker->randomElement(['SDN ', 'SMPN ', 'SMKN ']) . $faker->numberBetween(1, 100) . ' ' . $faker->city();
-            } elseif ($jenis === 'Posyandu') {
-                $nama = 'Posyandu ' . $faker->colorName() . ' ' . $faker->numberBetween(1, 9);
-            } else {
-                $nama = 'Puskesmas ' . $faker->streetName();
-            }
+        $namaLokasi = ['SDN 101877', 'SMKS PAB 2', 'Posyandu Melati', 'Puskesmas Kasih', 'SDIT Al-Ikhlas', 'SMPN 1 Medan', 'Posyandu Mawar', 'Klinik Sehat'];
+        $jalan = ['Jl. Beringin Raya', 'Jl. Veteran', 'Jl. Gatot Subroto', 'Jl. Sudirman', 'Jl. Merdeka'];
+        $penanggungJawab = ['Budi Santoso', 'Siti Aminah', 'Andi Wijaya', 'Rina Permata', 'Dewi Lestari', 'Agus Prayitno'];
 
-            TitikPenyaluran::firstOrCreate(
-                ['nama_lokasi' => $nama],
-                [
+        // Distribusikan Titik Penyaluran ke masing-masing IT MBG
+        foreach ($itUsers as $itUser) {
+            // Setiap IT MBG diberikan tanggung jawab mengelola 3 Titik Penyaluran
+            for ($i = 0; $i < 3; $i++) {
+                
+                // Ambil data acak dari gudang data manual
+                $lokasiAcak = $namaLokasi[array_rand($namaLokasi)] . ' - Sektor ' . rand(1, 99);
+                $jenis = (strpos($lokasiAcak, 'SD') !== false || strpos($lokasiAcak, 'SMP') !== false || strpos($lokasiAcak, 'SMK') !== false) ? 'Sekolah' : 'Posyandu';
+                
+                TitikPenyaluran::create([
+                    // KUNCI ISOLASI DATA: Titik ini mutlak milik IT MBG yang sedang di-loop
+                    'created_by' => $itUser->id, 
+                    
+                    'nama_lokasi' => $lokasiAcak,
                     'jenis_lokasi' => $jenis,
-                    'alamat' => $faker->address(),
-                    'penanggung_jawab' => $faker->name(),
-                    'kontak_person' => $faker->phoneNumber(),
-                    // Trik magis: Bikin link pencarian Google Maps berdasarkan nama yang di-generate!
-                    'map_url' => 'https://www.google.com/maps/search/?api=1&query=' . urlencode($nama . ' Indonesia'),
-                ]
-            );
+                    'alamat' => $jalan[array_rand($jalan)] . ' No. ' . rand(1, 100),
+                    'penanggung_jawab' => $penanggungJawab[array_rand($penanggungJawab)],
+                    'kontak_person' => '0812' . rand(10000000, 99999999),
+                    'map_url' => 'https://maps.google.com/?q=.1,100.' . rand(100, 999),
+                ]);
+            }
         }
+
+        $this->command->info('Titik Penyaluran berhasil didistribusikan ke 10 IT MBG secara eksklusif (Tanpa Faker!).');
     }
 }

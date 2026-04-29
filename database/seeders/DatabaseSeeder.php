@@ -68,6 +68,11 @@ class DatabaseSeeder extends Seeder
             MenuSeeder::class,
             ReviewSeeder::class,
             FaqSeeder::class,
+            PemasokSeeder::class,
+            TitikPenyaluranSeeder::class,
+            MenuSeeder::class,
+            ReviewSeeder::class,
+            FaqSeeder::class,
         ]);
     }
 }
